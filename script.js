@@ -961,7 +961,7 @@ window.generatePDFNaoPagas = async function() {
         yPos += 7;
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Mês: ${meses[currentMonth]} ${currentYear}`, pageWidth / 2, yPos, { align: 'center' });
+        doc.text(`${meses[currentMonth]} ${currentYear}`, pageWidth / 2, yPos, { align: 'center' });
         
         yPos += 5;
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, yPos, { align: 'center' });
@@ -1343,3 +1343,4 @@ function showMessage(message, type) {
         setTimeout(() => messageDiv.remove(), 300);
     }, 3000);
 }
+
