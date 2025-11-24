@@ -601,11 +601,12 @@ window.togglePago = async function(id) {
         const hoje = new Date().toISOString().split('T')[0];
         conta.status = 'PAGO';
         conta.data_pagamento = hoje;
+        console.log('Conta marcada como paga:', { id: conta.id, data_pagamento: conta.data_pagamento });
     }
 
     saveToLocalStorage();
     updateDashboard();
-    filterContas();
+    filterContas(); // Isso já chama renderContas()
 
     if (isOnline) {
         try {
@@ -629,6 +630,7 @@ window.togglePago = async function(id) {
                 if (index !== -1) {
                     contas[index] = savedData;
                     saveToLocalStorage();
+                    filterContas(); // Atualiza a tabela com dados do servidor
                 }
             }
         } catch (error) {
@@ -1247,6 +1249,18 @@ function renderContas(contasToRender) {
                 <tbody>
                     ${contasToRender.map(c => {
                         const isPago = c.status === 'PAGO';
+                        const dataPgto = c.data_pagamento ? formatDate(c.data_pagamento) : '-';
+                        
+                        // Debug: log apenas para contas pagas
+                        if (isPago && c.data_pagamento) {
+                            console.log('Renderizando conta paga:', { 
+                                id: c.id, 
+                                descricao: c.descricao, 
+                                data_pagamento_raw: c.data_pagamento,
+                                data_pagamento_formatada: dataPgto
+                            });
+                        }
+                        
                         return `
                         <tr class="${isPago ? 'row-pago' : ''}">
                             <td style="text-align: center; padding: 8px;">
@@ -1266,7 +1280,7 @@ function renderContas(contasToRender) {
                             <td style="white-space: nowrap;">${formatDate(c.data_vencimento)}</td>
                             <td>${c.banco}</td>
                             <td>${getStatusBadge(getStatusDinamico(c))}</td>
-                            <td style="white-space: nowrap;">${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
+                            <td style="white-space: nowrap;"><strong>${dataPgto}</strong></td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
                                 <button onclick="viewConta('${c.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
                                 <button onclick="editConta('${c.id}')" class="action-btn edit" title="Editar">Editar</button>
@@ -1287,6 +1301,14 @@ function renderContas(contasToRender) {
 // ============================================
 function formatDate(dateString) {
     if (!dateString) return '-';
+    
+    // Se já tem hora (ISO completo), usa direto
+    if (dateString.includes('T')) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR');
+    }
+    
+    // Se não tem hora, adiciona
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString('pt-BR');
 }
