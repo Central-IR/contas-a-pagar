@@ -419,7 +419,7 @@ button.small { padding: 8px 12px; font-size: 0.85rem; }
 
 .actions-cell { 
     white-space: nowrap;
-    min-width: 320px;
+    min-width: 240px;
 }
 
 .filter-section {
