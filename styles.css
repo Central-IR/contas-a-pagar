@@ -248,8 +248,17 @@ h2 {
 }
 
 .stat-card-alert.has-alert {
-    border: 1px solid #dc3545;
-    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+    animation: pulseAlert 2s ease-in-out infinite;
+    border-color: #EF4444 !important;
+}
+
+@keyframes pulseAlert {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.2);
+    }
 }
 
 .stat-card-warning {
@@ -266,17 +275,28 @@ h2 {
     position: absolute;
     top: -8px;
     right: -8px;
-    width: 24px;
-    height: 24px;
-    background: #dc3545;
+    width: 28px;
+    height: 28px;
+    background: #EF4444;
     color: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
+    animation: pulse 2s ease-in-out infinite;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+    z-index: 10;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .stat-card-warning .pulse-badge {
