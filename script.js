@@ -123,11 +123,8 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
 }
 
 function inicializarApp() {
-    // Carrega dados do localStorage primeiro
     loadFromLocalStorage();
     updateMonthDisplay();
-    
-    // Tenta sincronizar com o servidor
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
     startPolling();
@@ -203,8 +200,6 @@ async function syncWithServer() {
         if (!response.ok) return;
 
         const serverData = await response.json();
-        
-        // Mescla dados: prioriza dados do servidor, mantém dados locais não sincronizados
         const localOnlyData = contas.filter(c => String(c.id).startsWith('local_'));
         const mergedData = [...serverData, ...localOnlyData];
         
@@ -521,9 +516,7 @@ async function handleSubmit(event) {
         }
     }
 
-    // MODO OFFLINE: Salva localmente primeiro
     if (editId) {
-        // Editando conta existente
         const index = contas.findIndex(c => String(c.id) === String(editId));
         if (index !== -1) {
             contas[index] = { ...contas[index], ...formData };
@@ -531,7 +524,6 @@ async function handleSubmit(event) {
             showMessage('Conta atualizada localmente!', 'success');
         }
     } else {
-        // Nova conta
         const novaConta = {
             ...formData,
             id: generateLocalId(),
@@ -547,7 +539,6 @@ async function handleSubmit(event) {
     filterContas();
     closeFormModal();
 
-    // Tenta sincronizar com o servidor se online
     if (isOnline) {
         try {
             const url = editId ? `${API_URL}/contas/${editId}` : `${API_URL}/contas`;
@@ -577,7 +568,6 @@ async function handleSubmit(event) {
                     const index = contas.findIndex(c => String(c.id) === String(editId));
                     if (index !== -1) contas[index] = savedData;
                 } else {
-                    // Remove a conta local e adiciona a conta do servidor
                     contas = contas.filter(c => !String(c.id).startsWith('local_'));
                     contas.push(savedData);
                 }
@@ -616,7 +606,6 @@ window.togglePago = async function(id) {
     updateDashboard();
     filterContas();
 
-    // Tenta sincronizar se online
     if (isOnline) {
         try {
             const response = await fetch(`${API_URL}/contas/${idStr}`, {
@@ -688,7 +677,6 @@ window.deleteConta = async function(id) {
     filterContas();
     showMessage('Conta excluída localmente!', 'success');
 
-    // Tenta deletar no servidor se online
     if (isOnline && !idStr.startsWith('local_')) {
         try {
             const response = await fetch(`${API_URL}/contas/${idStr}`, {
@@ -785,6 +773,149 @@ window.switchViewTab = function(index) {
 };
 
 // ============================================
+// GERAÇÃO DE PDF
+// ============================================
+window.generatePDF = async function(id) {
+    const idStr = String(id);
+    const conta = contas.find(c => String(c.id) === idStr);
+    
+    if (!conta) {
+        showMessage('Conta não encontrada!', 'error');
+        return;
+    }
+
+    try {
+        // Importar jsPDF dinamicamente
+        if (typeof window.jspdf === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            document.head.appendChild(script);
+            
+            await new Promise((resolve, reject) => {
+                script.onload = resolve;
+                script.onerror = reject;
+            });
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Configurações
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        let yPos = 30;
+
+        // Cabeçalho
+        doc.setFontSize(20);
+        doc.setFont(undefined, 'bold');
+        doc.text('RELATÓRIO DE CONTA A PAGAR', pageWidth / 2, yPos, { align: 'center' });
+        
+        yPos += 15;
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, yPos, { align: 'center' });
+        
+        // Linha separadora
+        yPos += 10;
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        
+        yPos += 15;
+
+        // Dados da Conta
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('DADOS DA CONTA', margin, yPos);
+        
+        yPos += 10;
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+        
+        const dados = [
+            ['Descrição:', conta.descricao],
+            ['Valor:', `R$ ${parseFloat(conta.valor).toFixed(2)}`],
+            ['Data de Vencimento:', formatDate(conta.data_vencimento)],
+            ['Banco:', conta.banco],
+            ['Forma de Pagamento:', conta.forma_pagamento],
+            ['Frequência:', getFrequenciaText(conta.frequencia)],
+            ['Status:', conta.status === 'PAGO' ? 'PAGO' : 'PENDENTE']
+        ];
+
+        if (conta.status_nota) {
+            dados.push(['Status da Nota:', conta.status_nota]);
+        }
+
+        if (conta.data_pagamento) {
+            dados.push(['Data do Pagamento:', formatDate(conta.data_pagamento)]);
+        }
+
+        dados.forEach(([label, value]) => {
+            doc.setFont(undefined, 'bold');
+            doc.text(label, margin, yPos);
+            doc.setFont(undefined, 'normal');
+            doc.text(value, margin + 60, yPos);
+            yPos += 8;
+        });
+
+        // Status visual
+        yPos += 10;
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 15;
+
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text('STATUS ATUAL', margin, yPos);
+        yPos += 10;
+
+        // Box de status com cor
+        const statusDinamico = getStatusDinamico(conta);
+        let statusColor;
+        let statusText;
+
+        switch(statusDinamico) {
+            case 'PAGO':
+                statusColor = [34, 197, 94];
+                statusText = 'PAGO';
+                break;
+            case 'ATRASO':
+                statusColor = [239, 68, 68];
+                statusText = 'EM ATRASO';
+                break;
+            case 'EMINENTE':
+                statusColor = [245, 158, 11];
+                statusText = 'VENCIMENTO PRÓXIMO (15 DIAS)';
+                break;
+            default:
+                statusColor = [59, 130, 246];
+                statusText = 'PENDENTE';
+        }
+
+        doc.setFillColor(...statusColor);
+        doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 15, 3, 3, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.text(statusText, pageWidth / 2, yPos + 10, { align: 'center' });
+
+        // Rodapé
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'italic');
+        const footer = 'Este documento foi gerado automaticamente pelo Sistema de Contas a Pagar';
+        doc.text(footer, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+
+        // Salvar PDF
+        const fileName = `conta_${conta.descricao.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+        doc.save(fileName);
+        
+        showMessage('PDF gerado com sucesso!', 'success');
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        showMessage('Erro ao gerar PDF', 'error');
+    }
+};
+
+// ============================================
 // FILTROS
 // ============================================
 function updateAllFilters() {
@@ -793,8 +924,13 @@ function updateAllFilters() {
 }
 
 function updateBancosFilter() {
+    const contasDoMes = contas.filter(c => {
+        const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
+        return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
+    });
+
     const bancos = new Set();
-    contas.forEach(c => {
+    contasDoMes.forEach(c => {
         if (c.banco?.trim()) {
             bancos.add(c.banco.trim());
         }
@@ -818,11 +954,16 @@ function updateStatusFilter() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
+    const contasDoMes = contas.filter(c => {
+        const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
+        return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
+    });
+    
     const statusSet = new Set();
     let temAtraso = false;
     let temEminente = false;
     
-    contas.forEach(c => {
+    contasDoMes.forEach(c => {
         if (c.status === 'PAGO') {
             statusSet.add('PAGO');
         } else {
@@ -931,7 +1072,7 @@ function filterContas() {
 }
 
 // ============================================
-// RENDERIZAÇÃO
+// RENDERIZAÇÃO - TABELA SIMPLIFICADA
 // ============================================
 function renderContas(contasToRender) {
     const container = document.getElementById('contasContainer');
@@ -955,8 +1096,8 @@ function renderContas(contasToRender) {
                         <th>Valor</th>
                         <th>Vencimento</th>
                         <th>Banco</th>
-                        <th>Frequência</th>
                         <th>Status</th>
+                        <th>Data Pagamento</th>
                         <th style="text-align: center;">Ações</th>
                     </tr>
                 </thead>
@@ -981,11 +1122,12 @@ function renderContas(contasToRender) {
                             <td><strong>R$ ${parseFloat(c.valor).toFixed(2)}</strong></td>
                             <td style="white-space: nowrap;">${formatDate(c.data_vencimento)}</td>
                             <td>${c.banco}</td>
-                            <td>${getFrequenciaText(c.frequencia)}</td>
                             <td>${getStatusBadge(getStatusDinamico(c))}</td>
+                            <td style="white-space: nowrap;">${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
                                 <button onclick="viewConta('${c.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
                                 <button onclick="editConta('${c.id}')" class="action-btn edit" title="Editar">Editar</button>
+                                <button onclick="generatePDF('${c.id}')" class="action-btn pdf" title="Gerar PDF">PDF</button>
                                 <button onclick="deleteConta('${c.id}')" class="action-btn delete" title="Excluir">Excluir</button>
                             </td>
                         </tr>
