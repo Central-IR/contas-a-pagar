@@ -773,7 +773,7 @@ window.switchViewTab = function(index) {
 };
 
 // ============================================
-// GERAÇÃO DE PDF - CONTAS PAGAS (VERDE)
+// GERAÇÃO DE PDF - CONTAS PAGAS (CINZA)
 // ============================================
 window.generatePDFPagas = async function() {
     try {
@@ -808,19 +808,17 @@ window.generatePDFPagas = async function() {
         let yPos = 20;
 
         // Cabeçalho
-        doc.setFontSize(18);
-        doc.setFont(undefined, 'bold');
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
         doc.text('RELATÓRIO DE CONTAS A PAGAR', pageWidth / 2, yPos, { align: 'center' });
         
-        yPos += 10;
-        doc.setFontSize(14);
-        doc.setTextColor(34, 197, 94); // Verde
+        yPos += 8;
+        doc.setFontSize(12);
         doc.text('CONTAS PAGAS', pageWidth / 2, yPos, { align: 'center' });
         
-        yPos += 8;
+        yPos += 7;
         doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.text(`Mês: ${meses[currentMonth]} ${currentYear}`, pageWidth / 2, yPos, { align: 'center' });
         
         yPos += 5;
@@ -838,9 +836,9 @@ window.generatePDFPagas = async function() {
         const colWidths = [65, 25, 30, 35, 25];
         const startX = margin;
 
-        // Cabeçalho da tabela
-        doc.setFont(undefined, 'bold');
-        doc.setFillColor(34, 197, 94);
+        // Cabeçalho da tabela - CINZA
+        doc.setFont('helvetica', 'bold');
+        doc.setFillColor(74, 74, 74); // Cinza escuro
         doc.rect(startX, yPos, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], 8, 'F');
         doc.setTextColor(255, 255, 255);
         
@@ -857,7 +855,7 @@ window.generatePDFPagas = async function() {
         
         yPos += 8;
         doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
 
         // Dados das contas
         let totalPago = 0;
@@ -889,19 +887,20 @@ window.generatePDFPagas = async function() {
         // Total
         yPos += 5;
         doc.setLineWidth(0.5);
+        doc.setDrawColor(204, 112, 0);
         doc.line(margin, yPos, pageWidth - margin, yPos);
         yPos += 8;
 
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.setTextColor(34, 197, 94);
+        doc.setTextColor(0, 0, 0);
         doc.text('VALOR TOTAL:', startX, yPos);
         doc.text(`R$ ${totalPago.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin - 30, yPos);
 
         // Rodapé
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(8);
-        doc.setFont(undefined, 'italic');
+        doc.setFont('helvetica', 'italic');
         const footer = 'Este documento foi gerado automaticamente pelo Sistema de Contas a Pagar';
         doc.text(footer, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
 
@@ -916,7 +915,7 @@ window.generatePDFPagas = async function() {
 };
 
 // ============================================
-// GERAÇÃO DE PDF - CONTAS NÃO PAGAS (VERMELHO)
+// GERAÇÃO DE PDF - CONTAS NÃO PAGAS (CINZA)
 // ============================================
 window.generatePDFNaoPagas = async function() {
     try {
@@ -951,19 +950,17 @@ window.generatePDFNaoPagas = async function() {
         let yPos = 20;
 
         // Cabeçalho
-        doc.setFontSize(18);
-        doc.setFont(undefined, 'bold');
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
         doc.text('RELATÓRIO DE CONTAS A PAGAR', pageWidth / 2, yPos, { align: 'center' });
         
-        yPos += 10;
-        doc.setFontSize(14);
-        doc.setTextColor(239, 68, 68); // Vermelho
+        yPos += 8;
+        doc.setFontSize(12);
         doc.text('CONTAS NÃO PAGAS', pageWidth / 2, yPos, { align: 'center' });
         
-        yPos += 8;
+        yPos += 7;
         doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.text(`Mês: ${meses[currentMonth]} ${currentYear}`, pageWidth / 2, yPos, { align: 'center' });
         
         yPos += 5;
@@ -981,9 +978,9 @@ window.generatePDFNaoPagas = async function() {
         const colWidths = [65, 25, 30, 35, 25];
         const startX = margin;
 
-        // Cabeçalho da tabela
-        doc.setFont(undefined, 'bold');
-        doc.setFillColor(239, 68, 68);
+        // Cabeçalho da tabela - CINZA
+        doc.setFont('helvetica', 'bold');
+        doc.setFillColor(74, 74, 74); // Cinza escuro
         doc.rect(startX, yPos, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], 8, 'F');
         doc.setTextColor(255, 255, 255);
         
@@ -1000,7 +997,7 @@ window.generatePDFNaoPagas = async function() {
         
         yPos += 8;
         doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
 
         // Dados das contas
         let totalPendente = 0;
@@ -1032,19 +1029,20 @@ window.generatePDFNaoPagas = async function() {
         // Total
         yPos += 5;
         doc.setLineWidth(0.5);
+        doc.setDrawColor(204, 112, 0);
         doc.line(margin, yPos, pageWidth - margin, yPos);
         yPos += 8;
 
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.setTextColor(239, 68, 68);
+        doc.setTextColor(0, 0, 0);
         doc.text('VALOR TOTAL:', startX, yPos);
         doc.text(`R$ ${totalPendente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin - 30, yPos);
 
         // Rodapé
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(8);
-        doc.setFont(undefined, 'italic');
+        doc.setFont('helvetica', 'italic');
         const footer = 'Este documento foi gerado automaticamente pelo Sistema de Contas a Pagar';
         doc.text(footer, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
 
