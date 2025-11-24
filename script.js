@@ -773,19 +773,10 @@ window.switchViewTab = function(index) {
 };
 
 // ============================================
-// GERAÇÃO DE PDF
+// GERAÇÃO DE PDF - CONTAS PAGAS (VERDE)
 // ============================================
-window.generatePDF = async function(id) {
-    const idStr = String(id);
-    const conta = contas.find(c => String(c.id) === idStr);
-    
-    if (!conta) {
-        showMessage('Conta não encontrada!', 'error');
-        return;
-    }
-
+window.generatePDFPagas = async function() {
     try {
-        // Importar jsPDF dinamicamente
         if (typeof window.jspdf === 'undefined') {
             const script = document.createElement('script');
             script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -800,102 +791,112 @@ window.generatePDF = async function(id) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        // Configurações
+        const contasDoMes = contas.filter(c => {
+            const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
+            return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
+        });
+
+        const contasPagas = contasDoMes.filter(c => c.status === 'PAGO');
+
+        if (contasPagas.length === 0) {
+            showMessage('Não há contas pagas neste mês!', 'error');
+            return;
+        }
+
         const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 20;
-        let yPos = 30;
+        const margin = 15;
+        let yPos = 20;
 
         // Cabeçalho
-        doc.setFontSize(20);
+        doc.setFontSize(18);
         doc.setFont(undefined, 'bold');
-        doc.text('RELATÓRIO DE CONTA A PAGAR', pageWidth / 2, yPos, { align: 'center' });
+        doc.text('RELATÓRIO DE CONTAS A PAGAR', pageWidth / 2, yPos, { align: 'center' });
         
-        yPos += 15;
+        yPos += 10;
+        doc.setFontSize(14);
+        doc.setTextColor(34, 197, 94); // Verde
+        doc.text('CONTAS PAGAS', pageWidth / 2, yPos, { align: 'center' });
+        
+        yPos += 8;
         doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
         doc.setFont(undefined, 'normal');
+        doc.text(`Mês: ${meses[currentMonth]} ${currentYear}`, pageWidth / 2, yPos, { align: 'center' });
+        
+        yPos += 5;
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, yPos, { align: 'center' });
         
-        // Linha separadora
         yPos += 10;
         doc.setLineWidth(0.5);
         doc.line(margin, yPos, pageWidth - margin, yPos);
-        
-        yPos += 15;
-
-        // Dados da Conta
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.text('DADOS DA CONTA', margin, yPos);
-        
         yPos += 10;
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'normal');
+
+        // Tabela de contas
+        contasPagas.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
+
+        doc.setFontSize(9);
+        const colWidths = [65, 25, 30, 35, 25];
+        const startX = margin;
+
+        // Cabeçalho da tabela
+        doc.setFont(undefined, 'bold');
+        doc.setFillColor(34, 197, 94);
+        doc.rect(startX, yPos, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], 8, 'F');
+        doc.setTextColor(255, 255, 255);
         
-        const dados = [
-            ['Descrição:', conta.descricao],
-            ['Valor:', `R$ ${parseFloat(conta.valor).toFixed(2)}`],
-            ['Data de Vencimento:', formatDate(conta.data_vencimento)],
-            ['Banco:', conta.banco],
-            ['Forma de Pagamento:', conta.forma_pagamento],
-            ['Frequência:', getFrequenciaText(conta.frequencia)],
-            ['Status:', conta.status === 'PAGO' ? 'PAGO' : 'PENDENTE']
-        ];
+        let xPos = startX + 2;
+        doc.text('DESCRIÇÃO', xPos, yPos + 5);
+        xPos += colWidths[0];
+        doc.text('VENCIMENTO', xPos, yPos + 5);
+        xPos += colWidths[1];
+        doc.text('FORMA PGTO', xPos, yPos + 5);
+        xPos += colWidths[2];
+        doc.text('BANCO', xPos, yPos + 5);
+        xPos += colWidths[3];
+        doc.text('VALOR (R$)', xPos, yPos + 5);
+        
+        yPos += 8;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
 
-        if (conta.status_nota) {
-            dados.push(['Status da Nota:', conta.status_nota]);
-        }
+        // Dados das contas
+        let totalPago = 0;
+        contasPagas.forEach((conta, index) => {
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
 
-        if (conta.data_pagamento) {
-            dados.push(['Data do Pagamento:', formatDate(conta.data_pagamento)]);
-        }
+            const bgColor = index % 2 === 0 ? [245, 245, 245] : [255, 255, 255];
+            doc.setFillColor(...bgColor);
+            doc.rect(startX, yPos, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], 8, 'F');
 
-        dados.forEach(([label, value]) => {
-            doc.setFont(undefined, 'bold');
-            doc.text(label, margin, yPos);
-            doc.setFont(undefined, 'normal');
-            doc.text(value, margin + 60, yPos);
+            xPos = startX + 2;
+            doc.text(conta.descricao.substring(0, 30), xPos, yPos + 5);
+            xPos += colWidths[0];
+            doc.text(formatDate(conta.data_vencimento), xPos, yPos + 5);
+            xPos += colWidths[1];
+            doc.text(conta.forma_pagamento.substring(0, 12), xPos, yPos + 5);
+            xPos += colWidths[2];
+            doc.text(conta.banco.substring(0, 15), xPos, yPos + 5);
+            xPos += colWidths[3];
+            doc.text(`R$ ${parseFloat(conta.valor).toFixed(2)}`, xPos, yPos + 5);
+
+            totalPago += parseFloat(conta.valor);
             yPos += 8;
         });
 
-        // Status visual
-        yPos += 10;
+        // Total
+        yPos += 5;
         doc.setLineWidth(0.5);
         doc.line(margin, yPos, pageWidth - margin, yPos);
-        yPos += 15;
+        yPos += 8;
 
-        doc.setFontSize(14);
         doc.setFont(undefined, 'bold');
-        doc.text('STATUS ATUAL', margin, yPos);
-        yPos += 10;
-
-        // Box de status com cor
-        const statusDinamico = getStatusDinamico(conta);
-        let statusColor;
-        let statusText;
-
-        switch(statusDinamico) {
-            case 'PAGO':
-                statusColor = [34, 197, 94];
-                statusText = 'PAGO';
-                break;
-            case 'ATRASO':
-                statusColor = [239, 68, 68];
-                statusText = 'EM ATRASO';
-                break;
-            case 'EMINENTE':
-                statusColor = [245, 158, 11];
-                statusText = 'VENCIMENTO PRÓXIMO (15 DIAS)';
-                break;
-            default:
-                statusColor = [59, 130, 246];
-                statusText = 'PENDENTE';
-        }
-
-        doc.setFillColor(...statusColor);
-        doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 15, 3, 3, 'F');
-        doc.setTextColor(255, 255, 255);
         doc.setFontSize(12);
-        doc.text(statusText, pageWidth / 2, yPos + 10, { align: 'center' });
+        doc.setTextColor(34, 197, 94);
+        doc.text('VALOR TOTAL:', startX, yPos);
+        doc.text(`R$ ${totalPago.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin - 30, yPos);
 
         // Rodapé
         doc.setTextColor(0, 0, 0);
@@ -904,11 +905,153 @@ window.generatePDF = async function(id) {
         const footer = 'Este documento foi gerado automaticamente pelo Sistema de Contas a Pagar';
         doc.text(footer, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
 
-        // Salvar PDF
-        const fileName = `conta_${conta.descricao.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+        const fileName = `contas_pagas_${meses[currentMonth]}_${currentYear}.pdf`;
         doc.save(fileName);
         
-        showMessage('PDF gerado com sucesso!', 'success');
+        showMessage('PDF de contas pagas gerado!', 'success');
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        showMessage('Erro ao gerar PDF', 'error');
+    }
+};
+
+// ============================================
+// GERAÇÃO DE PDF - CONTAS NÃO PAGAS (VERMELHO)
+// ============================================
+window.generatePDFNaoPagas = async function() {
+    try {
+        if (typeof window.jspdf === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            document.head.appendChild(script);
+            
+            await new Promise((resolve, reject) => {
+                script.onload = resolve;
+                script.onerror = reject;
+            });
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const contasDoMes = contas.filter(c => {
+            const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
+            return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
+        });
+
+        const contasNaoPagas = contasDoMes.filter(c => c.status !== 'PAGO');
+
+        if (contasNaoPagas.length === 0) {
+            showMessage('Não há contas pendentes neste mês!', 'success');
+            return;
+        }
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 15;
+        let yPos = 20;
+
+        // Cabeçalho
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('RELATÓRIO DE CONTAS A PAGAR', pageWidth / 2, yPos, { align: 'center' });
+        
+        yPos += 10;
+        doc.setFontSize(14);
+        doc.setTextColor(239, 68, 68); // Vermelho
+        doc.text('CONTAS NÃO PAGAS', pageWidth / 2, yPos, { align: 'center' });
+        
+        yPos += 8;
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Mês: ${meses[currentMonth]} ${currentYear}`, pageWidth / 2, yPos, { align: 'center' });
+        
+        yPos += 5;
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, yPos, { align: 'center' });
+        
+        yPos += 10;
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 10;
+
+        // Tabela de contas
+        contasNaoPagas.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
+
+        doc.setFontSize(9);
+        const colWidths = [65, 25, 30, 35, 25];
+        const startX = margin;
+
+        // Cabeçalho da tabela
+        doc.setFont(undefined, 'bold');
+        doc.setFillColor(239, 68, 68);
+        doc.rect(startX, yPos, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        
+        let xPos = startX + 2;
+        doc.text('DESCRIÇÃO', xPos, yPos + 5);
+        xPos += colWidths[0];
+        doc.text('VENCIMENTO', xPos, yPos + 5);
+        xPos += colWidths[1];
+        doc.text('FORMA PGTO', xPos, yPos + 5);
+        xPos += colWidths[2];
+        doc.text('BANCO', xPos, yPos + 5);
+        xPos += colWidths[3];
+        doc.text('VALOR (R$)', xPos, yPos + 5);
+        
+        yPos += 8;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
+
+        // Dados das contas
+        let totalPendente = 0;
+        contasNaoPagas.forEach((conta, index) => {
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            const bgColor = index % 2 === 0 ? [245, 245, 245] : [255, 255, 255];
+            doc.setFillColor(...bgColor);
+            doc.rect(startX, yPos, colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], 8, 'F');
+
+            xPos = startX + 2;
+            doc.text(conta.descricao.substring(0, 30), xPos, yPos + 5);
+            xPos += colWidths[0];
+            doc.text(formatDate(conta.data_vencimento), xPos, yPos + 5);
+            xPos += colWidths[1];
+            doc.text(conta.forma_pagamento.substring(0, 12), xPos, yPos + 5);
+            xPos += colWidths[2];
+            doc.text(conta.banco.substring(0, 15), xPos, yPos + 5);
+            xPos += colWidths[3];
+            doc.text(`R$ ${parseFloat(conta.valor).toFixed(2)}`, xPos, yPos + 5);
+
+            totalPendente += parseFloat(conta.valor);
+            yPos += 8;
+        });
+
+        // Total
+        yPos += 5;
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(239, 68, 68);
+        doc.text('VALOR TOTAL:', startX, yPos);
+        doc.text(`R$ ${totalPendente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin - 30, yPos);
+
+        // Rodapé
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'italic');
+        const footer = 'Este documento foi gerado automaticamente pelo Sistema de Contas a Pagar';
+        doc.text(footer, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+
+        const fileName = `contas_nao_pagas_${meses[currentMonth]}_${currentYear}.pdf`;
+        doc.save(fileName);
+        
+        showMessage('PDF de contas não pagas gerado!', 'success');
     } catch (error) {
         console.error('Erro ao gerar PDF:', error);
         showMessage('Erro ao gerar PDF', 'error');
@@ -1127,7 +1270,6 @@ function renderContas(contasToRender) {
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
                                 <button onclick="viewConta('${c.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
                                 <button onclick="editConta('${c.id}')" class="action-btn edit" title="Editar">Editar</button>
-                                <button onclick="generatePDF('${c.id}')" class="action-btn pdf" title="Gerar PDF">PDF</button>
                                 <button onclick="deleteConta('${c.id}')" class="action-btn delete" title="Excluir">Excluir</button>
                             </td>
                         </tr>
