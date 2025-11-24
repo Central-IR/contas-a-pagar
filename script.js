@@ -423,10 +423,7 @@ function showFormModal(editingId = null) {
                                     <select id="banco" required>
                                         <option value="">Selecione...</option>
                                         <option value="BANCO DO BRASIL" ${conta?.banco === 'BANCO DO BRASIL' ? 'selected' : ''}>Banco do Brasil</option>
-                                        <option value="CAIXA" ${conta?.banco === 'CAIXA' ? 'selected' : ''}>Caixa Econômica</option>
                                         <option value="BRADESCO" ${conta?.banco === 'BRADESCO' ? 'selected' : ''}>Bradesco</option>
-                                        <option value="ITAU" ${conta?.banco === 'ITAU' ? 'selected' : ''}>Itaú</option>
-                                        <option value="SANTANDER" ${conta?.banco === 'SANTANDER' ? 'selected' : ''}>Santander</option>
                                         <option value="SICOOB" ${conta?.banco === 'SICOOB' ? 'selected' : ''}>Sicoob</option>
                                     </select>
                                 </div>
@@ -1431,3 +1428,4 @@ function showMessage(message, type) {
         setTimeout(() => messageDiv.remove(), 300);
     }, 3000);
 }
+
