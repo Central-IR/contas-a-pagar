@@ -396,9 +396,10 @@ button {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    transition: opacity 0.2s ease;
 }
 
-button:hover:not(:disabled) { opacity: 0.9; }
+button:hover:not(:disabled) { opacity: 0.85; }
 button:disabled { background: #4B5563; cursor: not-allowed; opacity: 0.5; }
 
 button.register, button[onclick*="toggleForm"] { background: var(--btn-register); }
