@@ -9,7 +9,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Configuração do Supabase
-// Configuração do Supabase
 const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -352,7 +351,7 @@ app.delete('/api/contas/:id', authenticateToken, async (req, res) => {
 
 // Rota raiz - servir o HTML
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
+    res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 // Iniciar servidor
