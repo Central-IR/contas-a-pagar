@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contas a Pagar</title>
-    <link rel="icon" type="png" href="I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png">
+    <link rel="icon" type="image/png" href="I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,9 +14,8 @@
     </div>
 
     <!-- Conteúdo Principal -->
-    <div class="app-content" id="appContent">
+    <div class="app-content">
         <div class="container">
-            <!-- HEADER -->
             <div class="header">
                 <h1>Contas a Pagar</h1>
                 <div id="connectionStatus" class="connection-status offline">
@@ -24,9 +23,8 @@
                 </div>
             </div>
 
-            <!-- BOTÃO REGISTRAR -->
             <div class="button-wrapper">
-                <button onclick="toggleForm()" class="btn-register">Registrar Conta</button>
+                <button onclick="toggleForm()" class="register">Registrar Conta</button>
             </div>
 
             <!-- NAVEGAÇÃO POR MESES -->
@@ -38,25 +36,22 @@
                 </div>
             </div>
 
-            <!-- DASHBOARD COM CARDS -->
+            <!-- Dashboard -->
             <div class="dashboard-grid">
                 <div class="stat-card">
                     <div class="stat-label">Pagos</div>
                     <div class="stat-value stat-success" id="statPagos">0</div>
                 </div>
-                
                 <div class="stat-card stat-card-alert" id="cardAtraso">
-                    <div class="stat-label">Vencido</div>
+                    <div class="stat-label">Em Atraso</div>
                     <div class="stat-value stat-danger" id="statAtraso">0</div>
-                    <div class="pulse-badge" id="pulseBadgeAtraso" style="display: none;">0</div>
+                    <div class="pulse-badge" id="pulseBadgeAtraso" style="display: none;">!</div>
                 </div>
-                
-                <div class="stat-card stat-card-warning" id="cardIminente">
-                    <div class="stat-label">Vence em 15 Dias</div>
-                    <div class="stat-value stat-warning" id="statIminente">0</div>
-                    <div class="pulse-badge-warning" id="pulseBadgeIminente" style="display: none;">0</div>
+                <div class="stat-card stat-card-warning" id="cardEminente">
+                    <div class="stat-label">Iminente (15 dias)</div>
+                    <div class="stat-value stat-warning" id="statEminente">0</div>
+                    <div class="pulse-badge" id="pulseBadgeEminente" style="display: none;">!</div>
                 </div>
-                
                 <div class="stat-card">
                     <div class="stat-label">Valor Total</div>
                     <div class="stat-value stat-success" id="statValorTotal">R$ 0,00</div>
@@ -65,6 +60,7 @@
 
             <!-- FILTROS -->
             <div class="card">
+                <h2>Filtros</h2>
                 <div class="filter-section">
                     <div class="form-group">
                         <label for="search">Pesquisar</label>
@@ -83,22 +79,12 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="filterFrequencia">Parcelas</label>
+                        <label for="filterFrequencia">Frequência</label>
                         <select id="filterFrequencia" onchange="filterContas()">
                             <option value="">Todas</option>
-                            <option value="PARCELA_UNICA">Parcela Única</option>
-                            <option value="1_PARCELA">1ª Parcela</option>
-                            <option value="2_PARCELA">2ª Parcela</option>
-                            <option value="3_PARCELA">3ª Parcela</option>
-                            <option value="4_PARCELA">4ª Parcela</option>
-                            <option value="5_PARCELA">5ª Parcela</option>
-                            <option value="6_PARCELA">6ª Parcela</option>
-                            <option value="7_PARCELA">7ª Parcela</option>
-                            <option value="8_PARCELA">8ª Parcela</option>
-                            <option value="9_PARCELA">9ª Parcela</option>
-                            <option value="10_PARCELA">10ª Parcela</option>
-                            <option value="11_PARCELA">11ª Parcela</option>
-                            <option value="12_PARCELA">12ª Parcela</option>
+                            <option value="MENSAL">Mensal</option>
+                            <option value="ANUAL">Anual</option>
+                            <option value="UNICA">Única</option>
                         </select>
                     </div>
                 </div>
@@ -107,23 +93,11 @@
             <!-- LISTA DE CONTAS -->
             <div class="card">
                 <h2>Lista de Contas</h2>
-                <div id="contasContainer">
-                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-                        Nenhuma conta encontrada
-                    </div>
-                </div>
+                <div id="contasContainer"></div>
             </div>
         </div>
     </div>
 
-    <script>
-        setTimeout(() => {
-            const splash = document.getElementById('splashScreen');
-            const appContent = document.getElementById('appContent');
-            if (splash) splash.style.display = 'none';
-            if (appContent) appContent.style.display = 'block';
-        }, 3000);
-    </script>
-    <script src="contas-script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
