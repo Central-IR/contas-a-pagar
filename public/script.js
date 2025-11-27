@@ -387,8 +387,8 @@ function showFormModal(editingId = null) {
                                     </select>
                                 </div>
                                 <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label for="status_nota">Status da Nota</label>
-                                    <input type="text" id="status_nota" value="${conta?.status_nota || ''}" placeholder="Ex: Recebida, Pendente...">
+                                    <label for="observacoes">Observações</label>
+                                    <input type="text" id="observacoes" value="${conta?.observacoes || ''}" placeholder="Ex: Nota recebida, pendente...">
                                 </div>
                             </div>
                         </div>
@@ -405,7 +405,7 @@ function showFormModal(editingId = null) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    const camposMaiusculas = ['descricao', 'status_nota'];
+    const camposMaiusculas = ['descricao', 'observacoes'];
     camposMaiusculas.forEach(campoId => {
         const campo = document.getElementById(campoId);
         if (campo) {
@@ -457,7 +457,7 @@ async function handleSubmit(event) {
         frequencia: document.getElementById('frequencia').value,
         forma_pagamento: document.getElementById('forma_pagamento').value,
         banco: document.getElementById('banco').value,
-        status_nota: document.getElementById('status_nota').value.trim(),
+        observacoes: document.getElementById('observacoes').value.trim(),
         status: 'PENDENTE',
         data_pagamento: null
     };
@@ -679,7 +679,7 @@ window.viewConta = function(id) {
                             <p><strong>Valor:</strong> R$ ${parseFloat(conta.valor).toFixed(2)}</p>
                             <p><strong>Data Vencimento:</strong> ${formatDate(conta.data_vencimento)}</p>
                             <p><strong>Frequência:</strong> ${getFrequenciaText(conta.frequencia)}</p>
-                            ${conta.status_nota ? `<p><strong>Status da Nota:</strong> ${conta.status_nota}</p>` : ''}
+                            ${conta.observacoes ? `<p><strong>Observações:</strong> ${conta.observacoes}</p>` : ''}
                             <p><strong>Status:</strong> ${getStatusBadge(conta.status)}</p>
                         </div>
                     </div>
