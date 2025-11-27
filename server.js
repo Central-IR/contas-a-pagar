@@ -1,115 +1,93 @@
-// ============================================
-// SERVIDOR UNIFICADO - CONTAS A PAGAR
-// API + Frontend em um único deploy
-// ============================================
-
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
+
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// ============================================
 // CONFIGURAÇÃO DO SUPABASE
-// ============================================
-
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ ERRO: SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados');
+    process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
+console.log('✅ Supabase configurado:', supabaseUrl);
 
-// ============================================
-// CONFIGURAÇÃO DE CORS
-// ============================================
-
-const allowedOrigins = [
-    'https://contas-a-pagar-ytr6.onrender.com',
-    'https://ir-comercio-portal-zcan.onrender.com',
-];
-
-const corsOptions = {
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(null, true);
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Session-Token'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 86400
-};
-
-app.use(cors(corsOptions));
-
-// ============================================
 // MIDDLEWARES
-// ============================================
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token']
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Log de requisições
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    console.log(`📥 ${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
 });
 
-// ============================================
-// AUTENTICAÇÃO SIMPLES
-// ============================================
+// AUTENTICAÇÃO
+const PORTAL_URL = process.env.PORTAL_URL || 'https://ir-comercio-portal-zcan.onrender.com';
 
-const VALID_SESSION_TOKEN = process.env.SESSION_TOKEN || 'token-super-secreto-123';
+async function verificarAutenticacao(req, res, next) {
+    const publicPaths = ['/', '/health'];
+    if (publicPaths.includes(req.path)) {
+        return next();
+    }
 
-function verificarAutenticacao(req, res, next) {
-    const token = req.headers['x-session-token'];
-    
-    if (!token || token !== VALID_SESSION_TOKEN) {
+    const sessionToken = req.headers['x-session-token'];
+
+    if (!sessionToken) {
         return res.status(401).json({
-            success: false,
-            error: 'Não autorizado'
+            error: 'Não autenticado',
+            message: 'Token de sessão não encontrado'
         });
     }
-    
-    next();
+
+    try {
+        const verifyResponse = await fetch(`${PORTAL_URL}/api/verify-session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionToken })
+        });
+
+        if (!verifyResponse.ok) {
+            return res.status(401).json({
+                error: 'Sessão inválida',
+                message: 'Sua sessão expirou'
+            });
+        }
+
+        const sessionData = await verifyResponse.json();
+
+        if (!sessionData.valid) {
+            return res.status(401).json({
+                error: 'Sessão inválida',
+                message: sessionData.message || 'Sua sessão expirou'
+            });
+        }
+
+        req.user = sessionData.session;
+        req.sessionToken = sessionToken;
+        next();
+    } catch (error) {
+        console.error('❌ Erro ao verificar autenticação:', error);
+        return res.status(500).json({
+            error: 'Erro interno',
+            message: 'Erro ao verificar autenticação'
+        });
+    }
 }
-
-// ============================================
-// FUNÇÕES AUXILIARES
-// ============================================
-
-function calcularStatusDinamico(conta) {
-    if (conta.status === 'PAGO') return 'PAGO';
-    if (conta.status === 'CANCELADO') return 'CANCELADO';
-    
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    
-    const vencimento = new Date(conta.data_vencimento + 'T00:00:00');
-    vencimento.setHours(0, 0, 0, 0);
-    
-    const diff = Math.floor((vencimento - hoje) / (1000 * 60 * 60 * 24));
-    
-    if (diff < 0) return 'ATRASO';
-    if (diff <= 15) return 'EMINENTE';
-    return 'PENDENTE';
-}
-
-// ============================================
-// ROTAS DA API
-// ============================================
-
-// Health Check
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString()
-    });
-});
 
 // GET /api/contas - Listar todas as contas
 app.get('/api/contas', verificarAutenticacao, async (req, res) => {
