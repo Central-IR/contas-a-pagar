@@ -24,10 +24,6 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const allowedOrigins = [
     'https://contas-a-pagar-ytr6.onrender.com',
     'https://ir-comercio-portal-zcan.onrender.com',
-    'http://localhost:3000',
-    'http://localhost:5000',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:5000'
 ];
 
 const corsOptions = {
