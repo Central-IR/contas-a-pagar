@@ -272,11 +272,15 @@ function updateDashboard() {
     
     if (vencido > 0) {
         cardAtraso.classList.add('has-alert');
-        badgeAtraso.style.display = 'flex';
-        badgeAtraso.textContent = vencido;
+        if (badgeAtraso) {
+            badgeAtraso.style.display = 'flex';
+            badgeAtraso.textContent = vencido;
+        }
     } else {
         cardAtraso.classList.remove('has-alert');
-        badgeAtraso.style.display = 'none';
+        if (badgeAtraso) {
+            badgeAtraso.style.display = 'none';
+        }
     }
     
     const cardIminente = document.getElementById('cardIminente');
@@ -284,11 +288,15 @@ function updateDashboard() {
     
     if (iminente > 0) {
         cardIminente.classList.add('has-warning');
-        badgeIminente.style.display = 'flex';
-        badgeIminente.textContent = iminente;
+        if (badgeIminente) {
+            badgeIminente.style.display = 'flex';
+            badgeIminente.textContent = iminente;
+        }
     } else {
         cardIminente.classList.remove('has-warning');
-        badgeIminente.style.display = 'none';
+        if (badgeIminente) {
+            badgeIminente.style.display = 'none';
+        }
     }
 }
 
