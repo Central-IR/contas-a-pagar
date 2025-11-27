@@ -2,10 +2,7 @@
 // CONFIGURAÇÃO
 // ============================================
 const PORTAL_URL = 'https://ir-comercio-portal-zcan.onrender.com';
-const API_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000/api' 
-    : '/api';
-const STORAGE_KEY = 'contasPagar_data';
+const API_URL = 'https://contas-pagar.onrender.com/api';
 
 let contas = [];
 let isOnline = false;
@@ -19,43 +16,15 @@ const meses = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-console.log('🚀 Contas a Pagar iniciada');
+console.log('Contas a Pagar iniciada');
 
 document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        document.getElementById('splashScreen').style.display = 'none';
+        document.querySelector('.app-content').style.display = 'block';
+    }, 1500);
     verificarAutenticacao();
 });
-
-// ============================================
-// ARMAZENAMENTO LOCAL
-// ============================================
-function saveToLocalStorage() {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(contas));
-        console.log('💾 Dados salvos localmente');
-    } catch (error) {
-        console.error('Erro ao salvar no localStorage:', error);
-    }
-}
-
-function loadFromLocalStorage() {
-    try {
-        const data = localStorage.getItem(STORAGE_KEY);
-        if (data) {
-            contas = JSON.parse(data);
-            console.log(`📊 ${contas.length} contas carregadas do armazenamento local`);
-            updateAllFilters();
-            updateDashboard();
-            filterContas();
-        }
-    } catch (error) {
-        console.error('Erro ao carregar do localStorage:', error);
-        contas = [];
-    }
-}
-
-function generateLocalId() {
-    return 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-}
 
 // ============================================
 // NAVEGAÇÃO POR MESES
@@ -121,7 +90,6 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
 }
 
 function inicializarApp() {
-    loadFromLocalStorage();
     updateMonthDisplay();
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
@@ -133,16 +101,14 @@ function inicializarApp() {
 // ============================================
 async function checkServerStatus() {
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
         const response = await fetch(`${API_URL}/contas`, {
-            method: 'HEAD',
-            headers: { 'X-Session-Token': sessionToken },
-            signal: controller.signal
+            method: 'GET',
+            headers: { 
+                'X-Session-Token': sessionToken,
+                'Accept': 'application/json'
+            },
+            mode: 'cors'
         });
-        
-        clearTimeout(timeoutId);
 
         if (response.status === 401) {
             sessionStorage.removeItem('contasPagarSession');
@@ -154,18 +120,13 @@ async function checkServerStatus() {
         isOnline = response.ok;
         
         if (wasOffline && isOnline) {
-            console.log('✅ Servidor ONLINE');
-            await syncWithServer();
-        } else if (!wasOffline && !isOnline) {
-            console.log('❌ Servidor OFFLINE');
+            console.log('Servidor ONLINE');
+            await loadContas();
         }
         
         updateConnectionStatus();
         return isOnline;
     } catch (error) {
-        if (isOnline) {
-            console.log('❌ Erro de conexão:', error.message);
-        }
         isOnline = false;
         updateConnectionStatus();
         return false;
@@ -180,14 +141,19 @@ function updateConnectionStatus() {
 }
 
 // ============================================
-// SINCRONIZAÇÃO
+// CARREGAMENTO DE DADOS
 // ============================================
-async function syncWithServer() {
+async function loadContas() {
     if (!isOnline) return;
 
     try {
         const response = await fetch(`${API_URL}/contas`, {
-            headers: { 'X-Session-Token': sessionToken }
+            method: 'GET',
+            headers: { 
+                'X-Session-Token': sessionToken,
+                'Accept': 'application/json'
+            },
+            mode: 'cors'
         });
 
         if (response.status === 401) {
@@ -198,28 +164,20 @@ async function syncWithServer() {
 
         if (!response.ok) return;
 
-        const serverData = await response.json();
-        const localOnlyData = contas.filter(c => String(c.id).startsWith('local_'));
-        const mergedData = [...serverData, ...localOnlyData];
-        
-        contas = mergedData;
-        saveToLocalStorage();
+        const data = await response.json();
+        contas = data;
         
         const newHash = JSON.stringify(contas.map(c => c.id));
         if (newHash !== lastDataHash) {
             lastDataHash = newHash;
-            console.log(`📊 ${contas.length} contas carregadas`);
+            console.log(`${contas.length} contas carregadas`);
             updateAllFilters();
             updateDashboard();
             filterContas();
         }
     } catch (error) {
-        // Silencioso
+        console.error('Erro ao carregar:', error);
     }
-}
-
-async function loadContas() {
-    await syncWithServer();
 }
 
 function startPolling() {
@@ -246,57 +204,49 @@ function updateDashboard() {
     
     const pagos = contasDoMes.filter(c => c.status === 'PAGO').length;
     
-    const vencido = contasDoMes.filter(c => {
+    const atraso = contasDoMes.filter(c => {
         if (c.status === 'PAGO') return false;
         const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
         dataVenc.setHours(0, 0, 0, 0);
-        return dataVenc <= hoje;
+        return dataVenc < hoje;
     }).length;
     
-    const iminente = contasDoMes.filter(c => {
+    const eminente = contasDoMes.filter(c => {
         if (c.status === 'PAGO') return false;
         const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
         dataVenc.setHours(0, 0, 0, 0);
-        return dataVenc > hoje && dataVenc <= quinzeDias;
+        return dataVenc >= hoje && dataVenc <= quinzeDias;
     }).length;
     
     const valorTotal = contasDoMes.reduce((sum, c) => sum + parseFloat(c.valor || 0), 0);
     
     document.getElementById('statPagos').textContent = pagos;
-    document.getElementById('statAtraso').textContent = vencido;
-    document.getElementById('statIminente').textContent = iminente;
+    document.getElementById('statAtraso').textContent = atraso;
+    document.getElementById('statEminente').textContent = eminente;
     document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
     const cardAtraso = document.getElementById('cardAtraso');
     const badgeAtraso = document.getElementById('pulseBadgeAtraso');
     
-    if (vencido > 0) {
+    if (atraso > 0) {
         cardAtraso.classList.add('has-alert');
-        if (badgeAtraso) {
-            badgeAtraso.style.display = 'flex';
-            badgeAtraso.textContent = vencido;
-        }
+        badgeAtraso.style.display = 'flex';
+        badgeAtraso.textContent = atraso;
     } else {
         cardAtraso.classList.remove('has-alert');
-        if (badgeAtraso) {
-            badgeAtraso.style.display = 'none';
-        }
+        badgeAtraso.style.display = 'none';
     }
     
-    const cardIminente = document.getElementById('cardIminente');
-    const badgeIminente = document.getElementById('pulseBadgeIminente');
+    const cardEminente = document.getElementById('cardEminente');
+    const badgeEminente = document.getElementById('pulseBadgeEminente');
     
-    if (iminente > 0) {
-        cardIminente.classList.add('has-warning');
-        if (badgeIminente) {
-            badgeIminente.style.display = 'flex';
-            badgeIminente.textContent = iminente;
-        }
+    if (eminente > 0) {
+        cardEminente.classList.add('has-warning');
+        badgeEminente.style.display = 'flex';
+        badgeEminente.textContent = eminente;
     } else {
-        cardIminente.classList.remove('has-warning');
-        if (badgeIminente) {
-            badgeIminente.style.display = 'none';
-        }
+        cardEminente.classList.remove('has-warning');
+        badgeEminente.style.display = 'none';
     }
 }
 
@@ -308,12 +258,12 @@ function showConfirm(message, options = {}) {
         const { title = 'Confirmação', confirmText = 'Confirmar', cancelText = 'Cancelar', type = 'warning' } = options;
 
         const modalHTML = `
-            <div class="modal-overlay" id="confirmModal">
-                <div class="modal-content">
+            <div class="modal-overlay" id="confirmModal" style="z-index: 10001;">
+                <div class="modal-content" style="max-width: 450px;">
                     <div class="modal-header">
                         <h3 class="modal-title">${title}</h3>
                     </div>
-                    <p class="modal-message">${message}</p>
+                    <p style="margin: 1.5rem 0; color: var(--text-primary); font-size: 1rem; line-height: 1.6;">${message}</p>
                     <div class="modal-actions">
                         <button class="secondary" id="modalCancelBtn">${cancelText}</button>
                         <button class="${type === 'warning' ? 'danger' : 'success'}" id="modalConfirmBtn">${confirmText}</button>
@@ -348,125 +298,6 @@ function showConfirm(message, options = {}) {
 }
 
 // ============================================
-// MODAL DE SELEÇÃO DE PARCELAS
-// ============================================
-function showParcelasModal(conta) {
-    return new Promise((resolve) => {
-        const parcelasFuturas = contas.filter(c => 
-            c.grupo_parcelas === conta.grupo_parcelas && 
-            c.parcela_atual > conta.parcela_atual &&
-            c.status !== 'PAGO'
-        ).length;
-
-        const modalHTML = `
-            <div class="modal-overlay" id="parcelasModal" style="z-index: 10002;">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3 class="modal-title">Quantas Parcelas Estão Sendo Pagas?</h3>
-                    </div>
-                    <div style="margin: 1.5rem 0;">
-                        <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-                            Esta é a ${conta.parcela_atual}ª parcela${parcelasFuturas > 0 ? ` (${parcelasFuturas} parcelas futuras)` : ''}
-                        </p>
-                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <button class="btn-opcao-parcela" data-opcao="APENAS_ESTA">
-                                Apenas Esta Parcela
-                            </button>
-                            ${parcelasFuturas > 0 ? `
-                                <button class="btn-opcao-parcela" data-opcao="TODAS">
-                                    Todas as Parcelas (${parcelasFuturas + 1} no total)
-                                </button>
-                                ${parcelasFuturas > 1 ? `
-                                    <button class="btn-opcao-parcela" data-opcao="CUSTOM">
-                                        Escolher Quantidade
-                                    </button>
-                                ` : ''}
-                            ` : ''}
-                        </div>
-                    </div>
-                    <div class="modal-actions">
-                        <button class="secondary" id="cancelParcelasBtn">Cancelar</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        const modal = document.getElementById('parcelasModal');
-
-        const closeModal = (result) => {
-            modal.style.animation = 'fadeOut 0.2s ease forwards';
-            setTimeout(() => { 
-                modal.remove(); 
-                resolve(result); 
-            }, 200);
-        };
-
-        document.querySelectorAll('.btn-opcao-parcela').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const opcao = btn.dataset.opcao;
-                
-                if (opcao === 'CUSTOM') {
-                    modal.remove();
-                    const qtd = await showQuantidadeModal(parcelasFuturas);
-                    resolve(qtd);
-                } else {
-                    closeModal(opcao);
-                }
-            });
-        });
-
-        document.getElementById('cancelParcelasBtn').addEventListener('click', () => closeModal(null));
-    });
-}
-
-function showQuantidadeModal(maxParcelas) {
-    return new Promise((resolve) => {
-        const options = [];
-        for (let i = 2; i <= maxParcelas + 1; i++) {
-            options.push(`<option value="${i}">${i} Parcelas</option>`);
-        }
-
-        const modalHTML = `
-            <div class="modal-overlay" id="quantidadeModal" style="z-index: 10002;">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3 class="modal-title">Quantas Parcelas?</h3>
-                    </div>
-                    <div style="margin: 1.5rem 0;">
-                        <select id="selectQuantidade" style="width: 100%; padding: 10px; background: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px;">
-                            ${options.join('')}
-                        </select>
-                    </div>
-                    <div class="modal-actions">
-                        <button class="secondary" id="cancelQtdBtn">Cancelar</button>
-                        <button class="success" id="confirmQtdBtn">Confirmar</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        const modal = document.getElementById('quantidadeModal');
-        const select = document.getElementById('selectQuantidade');
-
-        const closeModal = (result) => {
-            modal.style.animation = 'fadeOut 0.2s ease forwards';
-            setTimeout(() => { 
-                modal.remove(); 
-                resolve(result); 
-            }, 200);
-        };
-
-        document.getElementById('confirmQtdBtn').addEventListener('click', () => {
-            closeModal(select.value);
-        });
-
-        document.getElementById('cancelQtdBtn').addEventListener('click', () => closeModal(null));
-    });
-}
-
-// ============================================
 // FORMULÁRIO
 // ============================================
 window.toggleForm = function() {
@@ -487,16 +318,9 @@ function showFormModal(editingId = null) {
         }
     }
 
-    const parcelasOptions = ['PARCELA_UNICA', '1_PARCELA', '2_PARCELA', '3_PARCELA', '4_PARCELA', '5_PARCELA', '6_PARCELA', '7_PARCELA', '8_PARCELA', '9_PARCELA', '10_PARCELA', '11_PARCELA', '12_PARCELA'];
-    const parcelasHTML = parcelasOptions.map(p => {
-        const label = p === 'PARCELA_UNICA' ? 'Parcela Única' : p.replace('_PARCELA', 'ª Parcela');
-        const selected = conta?.frequencia === p ? 'selected' : '';
-        return `<option value="${p}" ${selected}>${label}</option>`;
-    }).join('');
-
     const modalHTML = `
         <div class="modal-overlay" id="formModal">
-            <div class="modal-content large">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">${isEditing ? 'Editar Conta' : 'Nova Conta'}</h3>
                 </div>
@@ -525,10 +349,12 @@ function showFormModal(editingId = null) {
                                     <input type="date" id="data_vencimento" value="${conta?.data_vencimento || ''}" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="frequencia">Parcelas *</label>
+                                    <label for="frequencia">Frequência *</label>
                                     <select id="frequencia" required>
                                         <option value="">Selecione...</option>
-                                        ${parcelasHTML}
+                                        <option value="MENSAL" ${conta?.frequencia === 'MENSAL' ? 'selected' : ''}>Mensal</option>
+                                        <option value="ANUAL" ${conta?.frequencia === 'ANUAL' ? 'selected' : ''}>Anual</option>
+                                        <option value="UNICA" ${conta?.frequencia === 'UNICA' ? 'selected' : ''}>Única</option>
                                     </select>
                                 </div>
                             </div>
@@ -561,15 +387,15 @@ function showFormModal(editingId = null) {
                                     </select>
                                 </div>
                                 <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label for="observacoes">Observações</label>
-                                    <input type="text" id="observacoes" value="${conta?.observacoes || ''}" placeholder="Ex: Nota recebida, pendente...">
+                                    <label for="status_nota">Status da Nota</label>
+                                    <input type="text" id="status_nota" value="${conta?.status_nota || ''}" placeholder="Ex: Recebida, Pendente...">
                                 </div>
                             </div>
                         </div>
 
                         <div class="modal-actions">
-                            <button type="button" class="secondary" onclick="closeFormModal(true)">Cancelar</button>
                             <button type="submit" class="save">${isEditing ? 'Atualizar' : 'Salvar'}</button>
+                            <button type="button" class="secondary" onclick="closeFormModal()">Cancelar</button>
                         </div>
                     </form>
                 </div>
@@ -578,19 +404,25 @@ function showFormModal(editingId = null) {
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    const camposMaiusculas = ['descricao', 'status_nota'];
+    camposMaiusculas.forEach(campoId => {
+        const campo = document.getElementById(campoId);
+        if (campo) {
+            campo.addEventListener('input', (e) => {
+                const start = e.target.selectionStart;
+                e.target.value = e.target.value.toUpperCase();
+                e.target.setSelectionRange(start, start);
+            });
+        }
+    });
+    
     setTimeout(() => document.getElementById('descricao')?.focus(), 100);
 }
 
-function closeFormModal(showCancelMessage = false) {
+function closeFormModal() {
     const modal = document.getElementById('formModal');
     if (modal) {
-        const editId = document.getElementById('editId')?.value;
-        const isEditing = editId && editId !== '';
-        
-        if (showCancelMessage) {
-            showMessage(isEditing ? 'Atualização cancelada' : 'Registro cancelado', 'error');
-        }
-        
         modal.style.animation = 'fadeOut 0.2s ease forwards';
         setTimeout(() => modal.remove(), 200);
     }
@@ -625,7 +457,7 @@ async function handleSubmit(event) {
         frequencia: document.getElementById('frequencia').value,
         forma_pagamento: document.getElementById('forma_pagamento').value,
         banco: document.getElementById('banco').value,
-        observacoes: document.getElementById('observacoes').value.trim(),
+        status_nota: document.getElementById('status_nota').value.trim(),
         status: 'PENDENTE',
         data_pagamento: null
     };
@@ -641,68 +473,59 @@ async function handleSubmit(event) {
         }
     }
 
-    if (editId) {
-        const index = contas.findIndex(c => String(c.id) === String(editId));
-        if (index !== -1) {
-            contas[index] = { ...contas[index], ...formData };
-            saveToLocalStorage();
-            showMessage('Atualizado!', 'success');
-        }
-    } else {
-        const novaConta = {
-            ...formData,
-            id: generateLocalId(),
-            timestamp: new Date().toISOString()
-        };
-        contas.push(novaConta);
-        saveToLocalStorage();
-        showMessage('Criado!', 'success');
+    if (!isOnline) {
+        showMessage('Sistema offline. Dados não foram salvos.', 'error');
+        closeFormModal();
+        return;
     }
 
-    updateAllFilters();
-    updateDashboard();
-    filterContas();
-    closeFormModal();
+    try {
+        const url = editId ? `${API_URL}/contas/${editId}` : `${API_URL}/contas`;
+        const method = editId ? 'PUT' : 'POST';
 
-    if (isOnline) {
-        try {
-            const url = editId ? `${API_URL}/contas/${editId}` : `${API_URL}/contas`;
-            const method = editId ? 'PUT' : 'POST';
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Session-Token': sessionToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(formData),
+            mode: 'cors'
+        });
 
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Session-Token': sessionToken
-                },
-                body: JSON.stringify(formData)
-            });
-
-            if (response.status === 401) {
-                sessionStorage.removeItem('contasPagarSession');
-                mostrarTelaAcessoNegado('Sua sessão expirou');
-                return;
-            }
-
-            if (response.ok) {
-                const savedData = await response.json();
-                
-                if (editId) {
-                    const index = contas.findIndex(c => String(c.id) === String(editId));
-                    if (index !== -1) contas[index] = savedData;
-                } else {
-                    contas = contas.filter(c => !String(c.id).startsWith('local_'));
-                    contas.push(savedData);
-                }
-                
-                saveToLocalStorage();
-                updateAllFilters();
-                updateDashboard();
-                filterContas();
-            }
-        } catch (error) {
-            console.log('Erro ao sincronizar, mas dados salvos localmente');
+        if (response.status === 401) {
+            sessionStorage.removeItem('contasPagarSession');
+            mostrarTelaAcessoNegado('Sua sessão expirou');
+            return;
         }
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || 'Erro ao salvar');
+        }
+
+        const savedData = await response.json();
+
+        if (editId) {
+            const index = contas.findIndex(c => String(c.id) === String(editId));
+            if (index !== -1) contas[index] = savedData;
+            showMessage('Conta atualizada!', 'success');
+        } else {
+            contas.push(savedData);
+            showMessage('Conta criada!', 'success');
+        }
+
+        lastDataHash = JSON.stringify(contas.map(c => c.id));
+        updateAllFilters();
+        updateDashboard();
+        filterContas();
+        closeFormModal();
+
+    } catch (error) {
+        console.error('Erro:', error);
+        showMessage(`Erro: ${error.message}`, 'error');
+        closeFormModal();
     }
 }
 
@@ -718,50 +541,15 @@ window.togglePago = async function(id) {
     if (conta.status === 'PAGO') {
         conta.status = 'PENDENTE';
         conta.data_pagamento = null;
+        updateDashboard();
+        filterContas();
     } else {
-        if (conta.grupo_parcelas) {
-            const opcao = await showParcelasModal(conta);
-            
-            if (!opcao) return;
-
-            const hoje = new Date().toISOString().split('T')[0];
-            conta.status = 'PAGO';
-            conta.data_pagamento = hoje;
-
-            if (isOnline) {
-                try {
-                    const response = await fetch(`${API_URL}/contas/${idStr}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Session-Token': sessionToken
-                        },
-                        body: JSON.stringify({ 
-                            status: 'PAGO',
-                            data_pagamento: hoje,
-                            parcelas_pagas: opcao
-                        })
-                    });
-
-                    if (response.ok) {
-                        await syncWithServer();
-                        showMessage('Pagamento registrado!', 'success');
-                        return;
-                    }
-                } catch (error) {
-                    console.log('Erro ao sincronizar, mas salvo localmente');
-                }
-            }
-        } else {
-            const hoje = new Date().toISOString().split('T')[0];
-            conta.status = 'PAGO';
-            conta.data_pagamento = hoje;
-        }
+        const hoje = new Date().toISOString().split('T')[0];
+        conta.status = 'PAGO';
+        conta.data_pagamento = hoje;
+        updateDashboard();
+        filterContas();
     }
-
-    saveToLocalStorage();
-    updateDashboard();
-    filterContas();
 
     if (isOnline) {
         try {
@@ -769,25 +557,29 @@ window.togglePago = async function(id) {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Session-Token': sessionToken
+                    'X-Session-Token': sessionToken,
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({ 
                     status: conta.status,
                     data_pagamento: conta.data_pagamento
-                })
+                }),
+                mode: 'cors'
             });
 
-            if (response.ok) {
-                const savedData = await response.json();
-                const index = contas.findIndex(c => String(c.id) === idStr);
-                if (index !== -1) {
-                    contas[index] = savedData;
-                    saveToLocalStorage();
-                    filterContas();
-                }
-            }
+            if (!response.ok) throw new Error('Erro ao atualizar');
+
+            const savedData = await response.json();
+            const index = contas.findIndex(c => String(c.id) === idStr);
+            if (index !== -1) contas[index] = savedData;
+
         } catch (error) {
-            console.log('Erro ao sincronizar status, mas salvo localmente');
+            console.error('Erro ao atualizar status:', error);
+            conta.status = conta.status === 'PAGO' ? 'PENDENTE' : 'PAGO';
+            conta.data_pagamento = conta.status === 'PAGO' ? new Date().toISOString().split('T')[0] : null;
+            updateDashboard();
+            filterContas();
+            showMessage('Erro ao atualizar status', 'error');
         }
     }
 };
@@ -824,26 +616,33 @@ window.deleteConta = async function(id) {
     if (!confirmed) return;
 
     const idStr = String(id);
+    const deletedConta = contas.find(c => String(c.id) === idStr);
     contas = contas.filter(c => String(c.id) !== idStr);
-    
-    saveToLocalStorage();
     updateAllFilters();
     updateDashboard();
     filterContas();
-    showMessage('Excluído!', 'error');
+    showMessage('Conta excluída!', 'success');
 
-    if (isOnline && !idStr.startsWith('local_')) {
+    if (isOnline) {
         try {
             const response = await fetch(`${API_URL}/contas/${idStr}`, {
                 method: 'DELETE',
-                headers: { 'X-Session-Token': sessionToken }
+                headers: {
+                    'X-Session-Token': sessionToken,
+                    'Accept': 'application/json'
+                },
+                mode: 'cors'
             });
 
-            if (response.ok) {
-                console.log('Conta excluída no servidor');
-            }
+            if (!response.ok) throw new Error('Erro ao deletar');
         } catch (error) {
-            console.log('Erro ao excluir no servidor, mas removida localmente');
+            if (deletedConta) {
+                contas.push(deletedConta);
+                updateAllFilters();
+                updateDashboard();
+                filterContas();
+                showMessage('Erro ao excluir', 'error');
+            }
         }
     }
 };
@@ -860,11 +659,9 @@ window.viewConta = function(id) {
         return;
     }
 
-    const parcelaLabel = conta.frequencia === 'PARCELA_UNICA' ? 'Parcela Única' : conta.frequencia.replace('_PARCELA', 'ª Parcela');
-
     const modalHTML = `
         <div class="modal-overlay" id="viewModal">
-            <div class="modal-content large">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h3 class="modal-title">Detalhes da Conta</h3>
                 </div>
@@ -881,8 +678,8 @@ window.viewConta = function(id) {
                             <p><strong>Descrição:</strong> ${conta.descricao}</p>
                             <p><strong>Valor:</strong> R$ ${parseFloat(conta.valor).toFixed(2)}</p>
                             <p><strong>Data Vencimento:</strong> ${formatDate(conta.data_vencimento)}</p>
-                            <p><strong>Parcela:</strong> ${parcelaLabel}</p>
-                            ${conta.observacoes ? `<p><strong>Observações:</strong> ${conta.observacoes}</p>` : ''}
+                            <p><strong>Frequência:</strong> ${getFrequenciaText(conta.frequencia)}</p>
+                            ${conta.status_nota ? `<p><strong>Status da Nota:</strong> ${conta.status_nota}</p>` : ''}
                             <p><strong>Status:</strong> ${getStatusBadge(conta.status)}</p>
                         </div>
                     </div>
@@ -934,13 +731,8 @@ function updateAllFilters() {
 }
 
 function updateBancosFilter() {
-    const contasDoMes = contas.filter(c => {
-        const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
-        return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
-    });
-
     const bancos = new Set();
-    contasDoMes.forEach(c => {
+    contas.forEach(c => {
         if (c.banco?.trim()) {
             bancos.add(c.banco.trim());
         }
@@ -964,29 +756,24 @@ function updateStatusFilter() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    const contasDoMes = contas.filter(c => {
-        const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
-        return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
-    });
-    
     const statusSet = new Set();
-    let temVencido = false;
-    let temIminente = false;
+    let temAtraso = false;
+    let temEminente = false;
     
-    contasDoMes.forEach(c => {
+    contas.forEach(c => {
         if (c.status === 'PAGO') {
             statusSet.add('PAGO');
         } else {
             const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
             dataVenc.setHours(0, 0, 0, 0);
             
-            if (dataVenc <= hoje) {
-                temVencido = true;
+            if (dataVenc < hoje) {
+                temAtraso = true;
             } else {
                 const quinzeDias = new Date(hoje);
                 quinzeDias.setDate(quinzeDias.getDate() + 15);
                 if (dataVenc <= quinzeDias) {
-                    temIminente = true;
+                    temEminente = true;
                 }
             }
         }
@@ -1004,17 +791,17 @@ function updateStatusFilter() {
             select.appendChild(opt);
         }
         
-        if (temVencido) {
+        if (temAtraso) {
             const opt = document.createElement('option');
-            opt.value = 'VENCIDO';
-            opt.textContent = 'Vencido';
+            opt.value = 'ATRASO';
+            opt.textContent = 'Em Atraso';
             select.appendChild(opt);
         }
         
-        if (temIminente) {
+        if (temEminente) {
             const opt = document.createElement('option');
-            opt.value = 'IMINENTE';
-            opt.textContent = 'Iminente';
+            opt.value = 'EMINENTE';
+            opt.textContent = 'Eminente';
             select.appendChild(opt);
         }
         
@@ -1049,17 +836,17 @@ function filterContas() {
             if (filterStatus === 'PAGO') {
                 return c.status === 'PAGO';
             }
-            if (filterStatus === 'VENCIDO') {
+            if (filterStatus === 'ATRASO') {
                 if (c.status === 'PAGO') return false;
                 const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
                 dataVenc.setHours(0, 0, 0, 0);
-                return dataVenc <= hoje;
+                return dataVenc < hoje;
             }
-            if (filterStatus === 'IMINENTE') {
+            if (filterStatus === 'EMINENTE') {
                 if (c.status === 'PAGO') return false;
                 const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
                 dataVenc.setHours(0, 0, 0, 0);
-                return dataVenc > hoje && dataVenc <= quinzeDias;
+                return dataVenc >= hoje && dataVenc <= quinzeDias;
             }
             return true;
         });
@@ -1106,18 +893,14 @@ function renderContas(contasToRender) {
                         <th>Valor</th>
                         <th>Vencimento</th>
                         <th>Banco</th>
-                        <th>Parcela</th>
+                        <th>Frequência</th>
                         <th>Status</th>
-                        <th>Data Pagamento</th>
                         <th style="text-align: center;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${contasToRender.map(c => {
                         const isPago = c.status === 'PAGO';
-                        const dataPgto = c.data_pagamento ? formatDate(c.data_pagamento) : '-';
-                        const parcelaLabel = c.frequencia === 'PARCELA_UNICA' ? 'Única' : c.frequencia.replace('_PARCELA', '');
-                        
                         return `
                         <tr class="${isPago ? 'row-pago' : ''}">
                             <td style="text-align: center; padding: 8px;">
@@ -1136,9 +919,8 @@ function renderContas(contasToRender) {
                             <td><strong>R$ ${parseFloat(c.valor).toFixed(2)}</strong></td>
                             <td style="white-space: nowrap;">${formatDate(c.data_vencimento)}</td>
                             <td>${c.banco}</td>
-                            <td>${parcelaLabel}</td>
+                            <td>${getFrequenciaText(c.frequencia)}</td>
                             <td>${getStatusBadge(getStatusDinamico(c))}</td>
-                            <td style="white-space: nowrap;"><strong>${dataPgto}</strong></td>
                             <td class="actions-cell" style="text-align: center; white-space: nowrap;">
                                 <button onclick="viewConta('${c.id}')" class="action-btn view" title="Ver detalhes">Ver</button>
                                 <button onclick="editConta('${c.id}')" class="action-btn edit" title="Editar">Editar</button>
@@ -1159,14 +941,17 @@ function renderContas(contasToRender) {
 // ============================================
 function formatDate(dateString) {
     if (!dateString) return '-';
-    
-    if (dateString.includes('T')) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pt-BR');
-    }
-    
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString('pt-BR');
+}
+
+function getFrequenciaText(freq) {
+    const map = {
+        'MENSAL': 'Mensal',
+        'ANUAL': 'Anual',
+        'UNICA': 'Única'
+    };
+    return map[freq] || freq;
 }
 
 function getStatusDinamico(conta) {
@@ -1177,12 +962,12 @@ function getStatusDinamico(conta) {
     const dataVenc = new Date(conta.data_vencimento + 'T00:00:00');
     dataVenc.setHours(0, 0, 0, 0);
     
-    if (dataVenc <= hoje) return 'VENCIDO';
+    if (dataVenc < hoje) return 'ATRASO';
     
     const quinzeDias = new Date(hoje);
     quinzeDias.setDate(quinzeDias.getDate() + 15);
     
-    if (dataVenc <= quinzeDias) return 'IMINENTE';
+    if (dataVenc <= quinzeDias) return 'EMINENTE';
     
     return 'PENDENTE';
 }
@@ -1190,8 +975,8 @@ function getStatusDinamico(conta) {
 function getStatusBadge(status) {
     const statusMap = {
         'PAGO': { class: 'entregue', text: 'Pago' },
-        'VENCIDO': { class: 'devolvido', text: 'Vencido' },
-        'IMINENTE': { class: 'rota', text: 'Iminente' },
+        'ATRASO': { class: 'devolvido', text: 'Atrasado' },
+        'EMINENTE': { class: 'rota', text: 'Eminente' },
         'PENDENTE': { class: 'transito', text: 'Pendente' }
     };
     
@@ -1199,9 +984,6 @@ function getStatusBadge(status) {
     return `<span class="badge ${s.class}">${s.text}</span>`;
 }
 
-// ============================================
-// MENSAGENS
-// ============================================
 function showMessage(message, type) {
     const oldMessages = document.querySelectorAll('.floating-message');
     oldMessages.forEach(msg => msg.remove());
