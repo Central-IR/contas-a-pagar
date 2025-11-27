@@ -1,16 +1,12 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
-
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// CONFIGURAÇÃO DO SUPABASE
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 if (!supabaseUrl || !supabaseKey) {
     console.error('❌ ERRO: SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados');
