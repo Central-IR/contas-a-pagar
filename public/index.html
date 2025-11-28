@@ -7,10 +7,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Splash Screen -->
     <div class="splash-screen" id="splashScreen">
         <h1 class="splash-title">Contas a Pagar</h1>
     </div>
 
+    <!-- Conteúdo Principal -->
     <div class="app-content">
         <div class="container">
             <div class="header">
@@ -20,10 +22,11 @@
                 </div>
             </div>
 
-            <!-- Botão Flutuante -->
-            <button class="floating-add-btn" onclick="toggleForm()" title="Registrar Conta">+</button>
+            <div class="button-wrapper">
+                <button onclick="toggleForm()" class="register">Nova Conta</button>
+            </div>
 
-            <!-- Navegação de Meses -->
+            <!-- NAVEGAÇÃO POR MESES -->
             <div class="card">
                 <div class="month-navigation">
                     <button onclick="previousMonth()" class="month-nav-btn">Anterior</button>
@@ -32,71 +35,74 @@
                 </div>
             </div>
 
-            <!-- Dashboard -->
+            <!-- DASHBOARD -->
             <div class="dashboard-grid">
                 <div class="stat-card">
                     <div class="stat-label">Pagos</div>
-                    <div class="stat-value stat-success" id="statPagos">0</div>
+                    <div class="stat-value stat-success" id="statPagos">R$ 0,00</div>
                 </div>
                 <div class="stat-card stat-card-alert" id="cardVencido">
-                    <div class="stat-label">Vencidos</div>
+                    <div class="stat-label">Vencido</div>
                     <div class="stat-value stat-danger" id="statVencido">0</div>
-                    <div class="pulse-badge" id="pulseBadgeVencido" style="display: none;">!</div>
+                    <div class="pulse-badge" id="pulseBadgeVencido" style="display: none;">0</div>
                 </div>
                 <div class="stat-card stat-card-warning" id="cardIminente">
-                    <div class="stat-label">Iminentes (15 dias)</div>
+                    <div class="stat-label">Iminente</div>
                     <div class="stat-value stat-warning" id="statIminente">0</div>
-                    <div class="pulse-badge" id="pulseBadgeIminente" style="display: none;">!</div>
+                    <div class="pulse-badge" id="pulseBadgeIminente" style="display: none; background: var(--warning-color);">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Valor Total</div>
-                    <div class="stat-value stat-success" id="statValorTotal">R$ 0,00</div>
+                    <div class="stat-value stat-total" id="statValorTotal">R$ 0,00</div>
                 </div>
             </div>
 
-            <!-- Filtros -->
+            <!-- FILTROS -->
             <div class="card">
                 <div class="filter-section">
                     <div class="form-group">
-                        <label for="search">Pesquisar</label>
+                        <label for="search">Pesquisar:</label>
                         <input type="text" id="search" placeholder="Descrição, banco..." oninput="filterContas()">
                     </div>
                     <div class="form-group">
-                        <label for="filterBanco">Banco</label>
+                        <label for="filterBanco">Filtrar por Banco:</label>
                         <select id="filterBanco" onchange="filterContas()">
                             <option value="">Todos</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="filterStatus">Status</label>
-                        <select id="filterStatus" onchange="filterContas()">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="filterPagamento">Pagamento</label>
+                        <label for="filterPagamento">Filtrar por Pagamento:</label>
                         <select id="filterPagamento" onchange="filterContas()">
-                            <option value="">Todas</option>
+                            <option value="">Todos</option>
                             <option value="BOLETO">Boleto</option>
                             <option value="CARTAO">Cartão</option>
                             <option value="DINHEIRO">Dinheiro</option>
                             <option value="TRANSFERENCIA">Transferência</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="filterStatus">Filtrar por Status:</label>
+                        <select id="filterStatus" onchange="filterContas()">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <!-- Lista de Contas -->
+            <!-- LISTA DE CONTAS -->
             <div class="card">
-                <div id="contasContainer">
-                    <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                        Carregando contas...
-                    </div>
-                </div>
+                <div id="contasContainer"></div>
             </div>
         </div>
     </div>
 
+    <script>
+        // Esconder splash após 3 segundos
+        setTimeout(() => {
+            const splash = document.getElementById('splashScreen');
+            if (splash) splash.style.display = 'none';
+        }, 3000);
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
