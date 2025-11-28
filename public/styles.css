@@ -53,7 +53,9 @@ body {
     overflow-y: scroll;
 }
 
-/* SPLASH SCREEN */
+/* ============================================
+   SPLASH SCREEN
+   ============================================ */
 .splash-screen {
     position: fixed;
     top: 0;
@@ -62,27 +64,44 @@ body {
     height: 100%;
     background: var(--bg-primary);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 99999;
+    animation: fadeOut 0.5s ease 2.5s forwards;
 }
 
 .splash-title {
     font-size: 2rem;
     font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.5px;
+    opacity: 0;
+    animation: smoothFadeIn 1.5s ease-out 0.3s forwards;
+}
+
+@keyframes smoothFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; visibility: hidden; }
 }
 
 .app-content {
-    display: none;
     opacity: 0;
+    animation: contentFadeIn 0.5s ease 2.8s forwards;
+}
+
+@keyframes contentFadeIn {
+    to { opacity: 1; }
 }
 
 .container {
     max-width: 1800px;
     margin: 2rem auto;
     padding: 0 1.5rem;
-    padding-bottom: 100px;
 }
 
 .card {
@@ -107,16 +126,21 @@ h1 {
     font-size: 2rem;
     font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.5px;
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-/* STATUS - APENAS BOLINHA */
+/* STATUS DE CONEXÃO */
 .connection-status {
     display: flex;
     align-items: center;
-    padding: 0.5rem;
+    gap: 0.6rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
 .status-dot {
@@ -145,33 +169,6 @@ h1 {
     0% { box-shadow: 0 0 0 0 rgba(231, 0, 0, 0.7); }
     70% { box-shadow: 0 0 0 10px rgba(231, 0, 0, 0); }
     100% { box-shadow: 0 0 0 0 rgba(231, 0, 0, 0); }
-}
-
-/* BOTÃO FLUTUANTE */
-.floating-add-btn {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
-    background: var(--btn-register);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    font-size: 2rem;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 119, 199, 0.4);
-    transition: all 0.3s ease;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-}
-
-.floating-add-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(0, 119, 199, 0.6);
 }
 
 /* DASHBOARD */
@@ -210,6 +207,11 @@ h1 {
     color: var(--text-primary);
 }
 
+/* VALOR TOTAL EM VERMELHO */
+.stat-value.stat-total {
+    color: #dc3545;
+}
+
 .stat-value.stat-warning { color: var(--warning-color); }
 .stat-value.stat-danger { color: #dc3545; }
 .stat-value.stat-success { color: var(--success-color); }
@@ -240,59 +242,45 @@ h1 {
     font-weight: 700;
 }
 
-/* CHECKBOX */
-.checkbox-wrapper {
-    display: inline-block;
-    position: relative;
-}
-
-.styled-checkbox {
-    position: absolute;
-    opacity: 0;
+/* BOTÃO DE CHECKBOX - IDÊNTICO AO DE COTAÇÕES */
+.check-btn {
+    background: var(--input-bg);
+    border: 2px solid var(--border-color);
+    color: transparent;
+    padding: 8px 12px;
+    border-radius: 8px;
     cursor: pointer;
-    width: 24px;
-    height: 24px;
-}
-
-.checkbox-label-styled {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
-    border: 2px solid #6B7280;
-    border-radius: 4px;
-    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 700;
     transition: all 0.2s ease;
-    position: relative;
-    background: transparent;
+    margin: 0;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.checkbox-label-styled:hover {
-    border-color: #22C55E;
-}
-
-.styled-checkbox:checked + .checkbox-label-styled {
-    background: #22C55E;
-    border-color: #22C55E;
-}
-
-.styled-checkbox:checked + .checkbox-label-styled::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+.check-btn:hover {
+    border-color: var(--primary);
+    background: var(--primary);
     color: white;
-    font-size: 16px;
-    font-weight: bold;
+}
+
+.check-btn.checked {
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: white;
 }
 
 /* LINHA PAGA */
 .row-pago {
-    background-color: rgba(34, 197, 94, 0.1) !important;
+    background: rgba(34, 197, 94, 0.1) !important;
+    border-left: 3px solid var(--success-color);
 }
 
 .row-pago:hover {
-    background-color: rgba(34, 197, 94, 0.15) !important;
+    background: rgba(34, 197, 94, 0.2) !important;
 }
 
 /* FORMULÁRIO */
@@ -350,7 +338,7 @@ input:focus, select:focus, textarea:focus {
     cursor: pointer;
 }
 
-/* BOTÕES */
+/* BOTÕES - CANCELAR EM VERMELHO */
 button {
     background: var(--primary);
     color: white;
@@ -362,12 +350,16 @@ button {
     font-weight: 600;
     margin-right: 12px;
     transition: opacity 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 button:hover:not(:disabled) { opacity: 0.9; }
 button:disabled { background: #4B5563; cursor: not-allowed; opacity: 0.5; }
 
-button.register { background: var(--btn-register); }
+button.register, button[onclick*="toggleForm"] { background: var(--btn-register); }
 button.danger, button.delete, .action-btn.delete { background: var(--btn-delete); }
 button.edit, .action-btn.edit { background: var(--btn-edit); }
 button.view, .action-btn.view { background: var(--btn-view); }
@@ -379,6 +371,11 @@ button.secondary { background: #4B5563; }
     font-size: 0.85rem;
     margin: 0 4px;
     min-width: 70px;
+}
+
+.actions-cell { 
+    white-space: nowrap;
+    min-width: 260px;
 }
 
 .filter-section {
@@ -394,6 +391,7 @@ table {
     border-spacing: 0;
     border-radius: 8px;
     overflow: hidden;
+    margin-top: 1rem;
 }
 
 thead { background: var(--th-bg); }
@@ -475,7 +473,11 @@ tbody tr:hover { background: var(--table-hover); }
     align-items: center;
     justify-content: center;
     z-index: 10000;
+    opacity: 0;
+    animation: fadeIn 0.2s ease forwards;
 }
+
+@keyframes fadeIn { to { opacity: 1; } }
 
 .modal-content {
     background: var(--bg-card);
@@ -487,7 +489,11 @@ tbody tr:hover { background: var(--table-hover); }
     overflow-y: auto;
     box-shadow: 0 20px 60px var(--shadow);
     border: 1px solid var(--border-color);
+    transform: scale(0.9);
+    animation: scaleIn 0.2s ease forwards;
 }
+
+@keyframes scaleIn { to { transform: scale(1); } }
 
 .modal-header {
     display: flex;
@@ -514,6 +520,8 @@ tbody tr:hover { background: var(--table-hover); }
     gap: 0.5rem;
     border-bottom: 2px solid var(--border-color);
     margin-bottom: 1.5rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
     flex-wrap: wrap;
 }
 
@@ -527,8 +535,10 @@ tbody tr:hover { background: var(--table-hover); }
     cursor: pointer;
     border-bottom: 3px solid transparent;
     transition: all 0.3s ease;
+    white-space: nowrap;
     margin: 0;
     border-radius: 0;
+    pointer-events: auto;
 }
 
 .tab-btn:hover {
@@ -539,14 +549,27 @@ tbody tr:hover { background: var(--table-hover); }
 .tab-btn.active {
     color: var(--primary);
     border-bottom-color: var(--primary);
+    background: transparent;
 }
 
 .tab-content {
     display: none;
+    animation: fadeInTab 0.3s ease;
 }
 
 .tab-content.active {
     display: block;
+}
+
+@keyframes fadeInTab {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .modal-actions {
@@ -564,12 +587,23 @@ tbody tr:hover { background: var(--table-hover); }
     margin-bottom: 1.5rem;
 }
 
+.info-section h4 {
+    color: var(--primary);
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
 .info-section p {
     margin-bottom: 0.5rem;
     line-height: 1.6;
 }
 
-/* NAVEGAÇÃO MESES */
+.hidden { display: none !important; }
+.button-wrapper { margin-bottom: 1.5rem; }
+
+/* NAVEGAÇÃO POR MESES */
 .month-navigation {
     display: flex;
     align-items: center;
@@ -583,8 +617,8 @@ tbody tr:hover { background: var(--table-hover); }
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
-    min-width: 200px;
     text-align: center;
+    min-width: 200px;
 }
 
 .month-nav-btn {
@@ -594,20 +628,40 @@ tbody tr:hover { background: var(--table-hover); }
     padding: 8px 16px;
     cursor: pointer;
     font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-decoration: none;
     border-radius: 6px;
-    margin: 0;
+    position: relative;
 }
 
 .month-nav-btn:hover {
     background: rgba(204, 112, 0, 0.1);
     color: var(--primary);
     border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.month-nav-btn:active {
+    transform: translateY(0);
 }
 
 @media (max-width: 768px) {
-    .container { padding: 0 1rem 100px 1rem; }
+    .container { padding: 0 1rem; margin: 1rem auto; }
+    .header { flex-direction: column; align-items: flex-start; }
+    h1 { font-size: 1.5rem; }
+    .splash-title { font-size: 1.3rem; margin-top: -8px; }
     .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+    table { font-size: 0.85rem; }
+    th, td { padding: 10px 8px; }
+    button { padding: 10px 16px; font-size: 0.9rem; }
     .form-grid { grid-template-columns: 1fr; }
+    .modal-content { padding: 1.5rem; width: 95%; }
+    .modal-actions { flex-direction: column-reverse; }
+    .modal-actions button { width: 100%; }
     .filter-section { grid-template-columns: 1fr; }
-    .floating-add-btn { bottom: 20px; right: 20px; width: 50px; height: 50px; font-size: 1.5rem; }
+    .tabs-nav { flex-wrap: nowrap; }
+    .tab-btn { font-size: 0.8rem; padding: 10px 15px; }
+    .actions-cell { min-width: auto; }
+    .month-navigation { gap: 1rem; }
 }
