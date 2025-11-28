@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contas a Pagar</title>
-    <link rel="icon" type="png" href="I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Splash Screen -->
     <div class="splash-screen" id="splashScreen">
         <h1 class="splash-title">Contas a Pagar</h1>
     </div>
 
-    <!-- Conteúdo Principal -->
     <div class="app-content">
         <div class="container">
             <div class="header">
@@ -23,11 +20,10 @@
                 </div>
             </div>
 
-            <div class="button-wrapper">
-                <button onclick="toggleForm()" class="register">Registrar Conta</button>
-            </div>
+            <!-- Botão Flutuante -->
+            <button class="floating-add-btn" onclick="toggleForm()" title="Registrar Conta">+</button>
 
-            <!-- NAVEGAÇÃO POR MESES -->
+            <!-- Navegação de Meses -->
             <div class="card">
                 <div class="month-navigation">
                     <button onclick="previousMonth()" class="month-nav-btn">Anterior</button>
@@ -42,15 +38,15 @@
                     <div class="stat-label">Pagos</div>
                     <div class="stat-value stat-success" id="statPagos">0</div>
                 </div>
-                <div class="stat-card stat-card-alert" id="cardAtraso">
-                    <div class="stat-label">Vencido</div>
-                    <div class="stat-value stat-danger" id="statAtraso">0</div>
-                    <div class="pulse-badge" id="pulseBadgeAtraso" style="display: none;">!</div>
+                <div class="stat-card stat-card-alert" id="cardVencido">
+                    <div class="stat-label">Vencidos</div>
+                    <div class="stat-value stat-danger" id="statVencido">0</div>
+                    <div class="pulse-badge" id="pulseBadgeVencido" style="display: none;">!</div>
                 </div>
-                <div class="stat-card stat-card-warning" id="cardEminente">
-                    <div class="stat-label">Vence em 15 dias</div>
-                    <div class="stat-value stat-warning" id="statEminente">0</div>
-                    <div class="pulse-badge" id="pulseBadgeEminente" style="display: none;">!</div>
+                <div class="stat-card stat-card-warning" id="cardIminente">
+                    <div class="stat-label">Iminentes (15 dias)</div>
+                    <div class="stat-value stat-warning" id="statIminente">0</div>
+                    <div class="pulse-badge" id="pulseBadgeIminente" style="display: none;">!</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Valor Total</div>
@@ -58,7 +54,7 @@
                 </div>
             </div>
 
-            <!-- FILTROS -->
+            <!-- Filtros -->
             <div class="card">
                 <div class="filter-section">
                     <div class="form-group">
@@ -78,20 +74,25 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="filterFrequencia">Frequência</label>
-                        <select id="filterFrequencia" onchange="filterContas()">
+                        <label for="filterPagamento">Pagamento</label>
+                        <select id="filterPagamento" onchange="filterContas()">
                             <option value="">Todas</option>
-                            <option value="MENSAL">Mensal</option>
-                            <option value="ANUAL">Anual</option>
-                            <option value="UNICA">Única</option>
+                            <option value="BOLETO">Boleto</option>
+                            <option value="CARTAO">Cartão</option>
+                            <option value="DINHEIRO">Dinheiro</option>
+                            <option value="TRANSFERENCIA">Transferência</option>
                         </select>
                     </div>
                 </div>
             </div>
 
-            <!-- LISTA DE CONTAS -->
+            <!-- Lista de Contas -->
             <div class="card">
-                <div id="contasContainer"></div>
+                <div id="contasContainer">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                        Carregando contas...
+                    </div>
+                </div>
             </div>
         </div>
     </div>
