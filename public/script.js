@@ -144,9 +144,13 @@ function updateConnectionStatus() {
 // CARREGAMENTO DE DADOS
 // ============================================
 async function loadContas() {
-    if (!isOnline) return;
+    if (!isOnline) {
+        console.log('⚠️ Sistema offline - não carregando contas');
+        return;
+    }
 
     try {
+        console.log('📡 Carregando contas da API...');
         const response = await fetch(`${API_URL}/contas`, {
             method: 'GET',
             headers: { 
@@ -157,26 +161,35 @@ async function loadContas() {
         });
 
         if (response.status === 401) {
+            console.error('❌ Sessão expirou');
             sessionStorage.removeItem('contasPagarSession');
             mostrarTelaAcessoNegado('Sua sessão expirou');
             return;
         }
 
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.error('❌ Erro na resposta:', response.status);
+            return;
+        }
 
         const data = await response.json();
+        console.log('✅ Dados recebidos:', data.length, 'contas');
+        console.log('📋 Contas:', data);
+        
         contas = data;
         
         const newHash = JSON.stringify(contas.map(c => c.id));
         if (newHash !== lastDataHash) {
             lastDataHash = newHash;
-            console.log(`${contas.length} contas carregadas`);
+            console.log(`🔄 ${contas.length} contas carregadas e atualizadas`);
             updateAllFilters();
             updateDashboard();
             filterContas();
+        } else {
+            console.log('ℹ️ Sem mudanças nos dados');
         }
     } catch (error) {
-        console.error('Erro ao carregar:', error);
+        console.error('❌ Erro ao carregar:', error);
     }
 }
 
@@ -686,15 +699,29 @@ function filterContas() {
     const status = document.getElementById('filterStatus')?.value || '';
     const pagamento = document.getElementById('filterPagamento')?.value || '';
     
+    console.log('🔍 Filtros ativos:', { search, banco, status, pagamento, currentMonth, currentYear });
+    console.log('📊 Total de contas no array:', contas.length);
+    
     // Filtrar apenas por mês/ano da data de vencimento
     let filtered = contas.filter(c => {
         const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
-        return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
+        const mesMatch = dataVenc.getMonth() === currentMonth;
+        const anoMatch = dataVenc.getFullYear() === currentYear;
+        return mesMatch && anoMatch;
     });
+    
+    console.log('📅 Contas do mês selecionado:', filtered.length);
 
     // Aplicar filtros adicionais
-    if (banco) filtered = filtered.filter(c => c.banco === banco);
-    if (pagamento) filtered = filtered.filter(c => c.forma_pagamento === pagamento);
+    if (banco) {
+        filtered = filtered.filter(c => c.banco === banco);
+        console.log('🏦 Após filtro banco:', filtered.length);
+    }
+    
+    if (pagamento) {
+        filtered = filtered.filter(c => c.forma_pagamento === pagamento);
+        console.log('💳 Após filtro pagamento:', filtered.length);
+    }
     
     // Filtro de status - calcular dinamicamente
     if (status) {
@@ -702,6 +729,8 @@ function filterContas() {
         hoje.setHours(0, 0, 0, 0);
         const quinze = new Date(hoje);
         quinze.setDate(quinze.getDate() + 15);
+        
+        const beforeFilter = filtered.length;
         
         filtered = filtered.filter(c => {
             if (status === 'PAGO') return c.status === 'PAGO';
@@ -729,19 +758,25 @@ function filterContas() {
             
             return true;
         });
+        
+        console.log(`🎯 Após filtro status "${status}":`, beforeFilter, '→', filtered.length);
     }
 
     // Filtro de busca
     if (search) {
+        const beforeSearch = filtered.length;
         filtered = filtered.filter(c => 
             (c.descricao || '').toLowerCase().includes(search) ||
             (c.banco || '').toLowerCase().includes(search) ||
             (c.forma_pagamento || '').toLowerCase().includes(search)
         );
+        console.log('🔎 Após busca:', beforeSearch, '→', filtered.length);
     }
 
     // Ordenar por data de vencimento
     filtered.sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
+    
+    console.log('✅ Renderizando', filtered.length, 'contas');
     renderContas(filtered);
 }
 
@@ -750,12 +785,23 @@ function filterContas() {
 // ============================================
 function renderContas(lista) {
     const container = document.getElementById('contasContainer');
-    if (!container) return;
     
-    if (!lista.length) {
+    console.log('🎨 Renderizando contas...');
+    console.log('📦 Container encontrado:', !!container);
+    console.log('📋 Quantidade para renderizar:', lista?.length || 0);
+    
+    if (!container) {
+        console.error('❌ Container #contasContainer não encontrado!');
+        return;
+    }
+    
+    if (!lista || lista.length === 0) {
+        console.log('ℹ️ Nenhuma conta para exibir');
         container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary)">Nenhuma conta encontrada para este período</div>';
         return;
     }
+
+    console.log('✅ Gerando tabela com', lista.length, 'linhas');
 
     const table = `
         <div style="overflow-x: auto;">
@@ -773,7 +819,9 @@ function renderContas(lista) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${lista.map(c => `
+                    ${lista.map(c => {
+                        console.log('  ➜ Renderizando conta:', c.id, c.descricao);
+                        return `
                         <tr class="${c.status === 'PAGO' ? 'row-pago' : ''}">
                             <td style="text-align: center;">
                                 <button class="check-btn ${c.status === 'PAGO' ? 'checked' : ''}" 
@@ -794,13 +842,14 @@ function renderContas(lista) {
                                 <button onclick="deleteConta('${c.id}')" class="action-btn delete">Excluir</button>
                             </td>
                         </tr>
-                    `).join('')}
+                    `}).join('')}
                 </tbody>
             </table>
         </div>
     `;
     
     container.innerHTML = table;
+    console.log('✅ Tabela inserida no DOM');
 }
 
 // ============================================
