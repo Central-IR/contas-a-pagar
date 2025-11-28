@@ -40,7 +40,7 @@ app.use((req, res, next) => {
 });
 
 // AUTENTICAÇÃO
-const PORTAL_URL = process.env.PORTAL_URL || 'https://ir-comercio-portal.onrender.com';
+const PORTAL_URL = process.env.PORTAL_URL || 'https://ir-comercio-portal-zcan.onrender.com';
 
 async function verificarAutenticacao(req, res, next) {
     const publicPaths = ['/', '/health'];
