@@ -101,7 +101,7 @@ body {
 .container {
     max-width: 1800px;
     margin: 2rem auto;
-    padding: 0 1.5rem;
+    padding: 0 1.5rem 5rem 1.5rem; /* Adicionado padding-bottom para o botão flutuante */
 }
 
 .card {
@@ -171,6 +171,44 @@ h1 {
     100% { box-shadow: 0 0 0 0 rgba(231, 0, 0, 0); }
 }
 
+/* ============================================
+   BOTÃO FLUTUANTE
+   ============================================ */
+.floating-add-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--btn-register);
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 119, 199, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    padding: 0;
+    margin: 0;
+}
+
+.floating-add-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 119, 199, 0.6);
+}
+
+.floating-add-btn:active {
+    transform: scale(0.95);
+}
+
+.floating-add-btn svg {
+    width: 28px;
+    height: 28px;
+}
+
 /* DASHBOARD */
 .dashboard-grid {
     display: grid;
@@ -207,8 +245,9 @@ h1 {
     color: var(--text-primary);
 }
 
-/* VALOR TOTAL EM VERMELHO */
-.stat-value.stat-total {
+/* VALOR TOTAL E PENDENTE EM VERMELHO */
+.stat-value.stat-total,
+.stat-value.stat-pending {
     color: #dc3545;
 }
 
@@ -319,23 +358,25 @@ input:focus, select:focus, textarea:focus {
     border-color: var(--primary);
 }
 
-/* CHECKBOX FIXA */
-.checkbox-fixa-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 0;
+/* PARCELAMENTO */
+.parcelas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
 }
 
-.checkbox-fixa-wrapper input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
+.parcela-item {
+    background: var(--input-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
 }
 
-.checkbox-fixa-wrapper label {
-    margin: 0;
-    cursor: pointer;
+.parcela-item h4 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-size: 1rem;
 }
 
 /* BOTÕES - CANCELAR EM VERMELHO */
@@ -430,7 +471,6 @@ tbody tr:hover { background: var(--table-hover); }
 
 .badge.pago { background: rgba(34, 197, 94, 0.2); color: #22C55E; border: 1px solid rgba(34, 197, 94, 0.3); }
 .badge.vencido { background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-.badge.iminente { background: rgba(139, 92, 246, 0.2); color: #8B5CF6; border: 1px solid rgba(139, 92, 246, 0.3); }
 .badge.pendente { background: rgba(59, 130, 246, 0.2); color: #3B82F6; border: 1px solid rgba(59, 130, 246, 0.3); }
 
 /* MENSAGENS FLUTUANTES */
@@ -647,7 +687,7 @@ tbody tr:hover { background: var(--table-hover); }
 }
 
 @media (max-width: 768px) {
-    .container { padding: 0 1rem; margin: 1rem auto; }
+    .container { padding: 0 1rem 5rem 1rem; margin: 1rem auto; }
     .header { flex-direction: column; align-items: flex-start; }
     h1 { font-size: 1.5rem; }
     .splash-title { font-size: 1.3rem; margin-top: -8px; }
@@ -664,4 +704,17 @@ tbody tr:hover { background: var(--table-hover); }
     .tab-btn { font-size: 0.8rem; padding: 10px 15px; }
     .actions-cell { min-width: auto; }
     .month-navigation { gap: 1rem; }
+    .floating-add-btn {
+        width: 56px;
+        height: 56px;
+        bottom: 1.5rem;
+        right: 1.5rem;
+    }
+    .floating-add-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+    .parcelas-grid {
+        grid-template-columns: 1fr;
+    }
 }
