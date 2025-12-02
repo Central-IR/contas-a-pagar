@@ -277,28 +277,66 @@ function showFormModal(editingId) {
                 
                 <div class="tabs-container">
                     <div class="tabs-nav">
-                        <button class="tab-btn active" onclick="switchFormTab(0)">Dados da Conta</button>
-                        <button class="tab-btn" onclick="switchFormTab(1)">Pagamento</button>
-                        ${!isEditing ? '<button class="tab-btn" onclick="switchFormTab(2)">Parcelamento</button>' : ''}
+                        ${!isEditing ? '<button class="tab-btn active" onclick="switchFormTab(0)">Tipo de Registro</button>' : ''}
+                        <button class="tab-btn ${isEditing ? 'active' : ''}" onclick="switchFormTab(1)">Dados da Conta</button>
+                        <button class="tab-btn" onclick="switchFormTab(2)">Pagamento</button>
                     </div>
 
                     <form id="contaForm" onsubmit="handleSubmit(event)">
                         <input type="hidden" id="editId" value="${editingId || ''}">
                         
-                        <div class="tab-content active" id="tab-conta">
-                            <div class="form-grid">
-                                <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label for="descricao">Descrição *</label>
-                                    <input type="text" id="descricao" value="${conta?.descricao || ''}" required>
+                        ${!isEditing ? `
+                        <div class="tab-content active" id="tab-tipo">
+                            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; padding: 2rem 0;">
+                                <div class="tipo-card" onclick="selecionarTipo('unica')" id="card-unica">
+                                    <div class="tipo-icon">📄</div>
+                                    <h4>Conta Única</h4>
+                                    <p>Registrar uma única conta com valor e vencimento</p>
+                                </div>
+                                <div class="tipo-card" onclick="selecionarTipo('parcelada')" id="card-parcelada">
+                                    <div class="tipo-icon">📊</div>
+                                    <h4>Conta Parcelada</h4>
+                                    <p>Dividir em várias parcelas com valores e datas personalizadas</p>
+                                </div>
+                            </div>
+                            <input type="hidden" id="tipo_registro" value="">
+                        </div>
+                        ` : ''}
+                        
+                        <div class="tab-content ${isEditing ? 'active' : ''}" id="tab-conta">
+                            <div id="conta-unica-fields">
+                                <div class="form-grid">
+                                    <div class="form-group" style="grid-column: 1 / -1;">
+                                        <label for="descricao">Descrição *</label>
+                                        <input type="text" id="descricao" value="${conta?.descricao || ''}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="valor">Valor (R$) *</label>
+                                        <input type="number" id="valor" step="0.01" min="0" value="${conta?.valor || ''}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="data_vencimento">Vencimento *</label>
+                                        <input type="date" id="data_vencimento" value="${conta?.data_vencimento || ''}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="conta-parcelada-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="descricao_base">Descrição Base *</label>
+                                    <input type="text" id="descricao_base">
+                                    <small style="color: var(--text-secondary); display: block; margin-top: 0.5rem;">
+                                        Esta descrição será usada como base. Exemplo: "CARTÃO NUBANK" gerará "CARTÃO NUBANK - 1ª PARCELA"
+                                    </small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="valor">Valor (R$) *</label>
-                                    <input type="number" id="valor" step="0.01" min="0" value="${conta?.valor || ''}" required>
+                                    <label for="num_parcelas">Número de Parcelas *</label>
+                                    <input type="number" id="num_parcelas" min="2" max="60" value="2" onchange="gerarCamposParcelas()">
                                 </div>
-                                <div class="form-group">
-                                    <label for="data_vencimento">Vencimento *</label>
-                                    <input type="date" id="data_vencimento" value="${conta?.data_vencimento || ''}" required>
-                                </div>
+                                <button type="button" class="secondary" onclick="gerarCamposParcelas()" style="margin: 1rem 0;">
+                                    Gerar Campos das Parcelas
+                                </button>
+                                <div id="parcelas-container"></div>
                             </div>
                         </div>
 
@@ -323,7 +361,7 @@ function showFormModal(editingId) {
                                         <option value="SICOOB" ${conta?.banco === 'SICOOB' ? 'selected' : ''}>Sicoob</option>
                                     </select>
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group" id="data-pagamento-group">
                                     <label for="data_pagamento">Data do Pagamento</label>
                                     <input type="date" id="data_pagamento" value="${conta?.data_pagamento || ''}">
                                 </div>
@@ -333,27 +371,6 @@ function showFormModal(editingId) {
                                 </div>
                             </div>
                         </div>
-
-                        ${!isEditing ? `
-                        <div class="tab-content" id="tab-parcelamento">
-                            <div class="form-grid">
-                                <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label>
-                                        <input type="checkbox" id="usar_parcelamento" onchange="toggleParcelamento()">
-                                        Dividir em parcelas
-                                    </label>
-                                </div>
-                                <div id="parcelamento-fields" style="display: none; grid-column: 1 / -1;">
-                                    <div class="form-group">
-                                        <label for="num_parcelas">Número de Parcelas *</label>
-                                        <input type="number" id="num_parcelas" min="2" max="60" value="2">
-                                    </div>
-                                    <button type="button" class="secondary" onclick="gerarParcelas()" style="margin-top: 1rem;">Gerar Parcelas</button>
-                                    <div id="parcelas-container" style="margin-top: 1.5rem;"></div>
-                                </div>
-                            </div>
-                        </div>
-                        ` : ''}
 
                         <div class="modal-actions">
                             <button type="submit" class="save">Salvar</button>
@@ -367,7 +384,7 @@ function showFormModal(editingId) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    ['descricao', 'observacoes'].forEach(id => {
+    ['descricao', 'descricao_base', 'observacoes'].forEach(id => {
         const campo = document.getElementById(id);
         if (campo) campo.addEventListener('input', e => {
             const pos = e.target.selectionStart;
@@ -376,47 +393,50 @@ function showFormModal(editingId) {
         });
     });
     
-    setTimeout(() => document.getElementById('descricao')?.focus(), 100);
+    if (isEditing) {
+        setTimeout(() => document.getElementById('descricao')?.focus(), 100);
+    }
 }
 
-window.toggleParcelamento = function() {
-    const checkbox = document.getElementById('usar_parcelamento');
-    const fields = document.getElementById('parcelamento-fields');
-    if (fields) {
-        fields.style.display = checkbox.checked ? 'block' : 'none';
+window.selecionarTipo = function(tipo) {
+    document.getElementById('tipo_registro').value = tipo;
+    
+    // Atualizar visual dos cards
+    document.getElementById('card-unica').classList.remove('selected');
+    document.getElementById('card-parcelada').classList.remove('selected');
+    
+    if (tipo === 'unica') {
+        document.getElementById('card-unica').classList.add('selected');
+    } else {
+        document.getElementById('card-parcelada').classList.add('selected');
     }
+    
+    // Avançar para próxima aba
+    setTimeout(() => switchFormTab(1), 300);
 };
 
-window.gerarParcelas = function() {
+window.gerarCamposParcelas = function() {
     const numParcelas = parseInt(document.getElementById('num_parcelas')?.value) || 2;
-    const valorTotal = parseFloat(document.getElementById('valor')?.value) || 0;
-    const dataInicial = document.getElementById('data_vencimento')?.value;
+    const container = document.getElementById('parcelas-container');
     
-    if (!valorTotal || !dataInicial) {
-        showMessage('Preencha o valor e data de vencimento primeiro!', 'error');
+    if (numParcelas < 2 || numParcelas > 60) {
+        showMessage('Número de parcelas deve ser entre 2 e 60!', 'error');
         return;
     }
-    
-    const valorParcela = (valorTotal / numParcelas).toFixed(2);
-    const container = document.getElementById('parcelas-container');
     
     let html = '<div class="parcelas-grid">';
     
     for (let i = 1; i <= numParcelas; i++) {
-        const data = new Date(dataInicial);
-        data.setMonth(data.getMonth() + (i - 1));
-        const dataFormatada = data.toISOString().split('T')[0];
-        
         html += `
             <div class="parcela-item">
                 <h4>${i}ª Parcela</h4>
                 <div class="form-group">
-                    <label>Data de Vencimento</label>
-                    <input type="date" id="parcela_data_${i}" value="${dataFormatada}" required>
+                    <label>Data de Vencimento *</label>
+                    <input type="date" id="parcela_data_${i}" required>
                 </div>
                 <div class="form-group">
-                    <label>Valor (R$)</label>
-                    <input type="number" id="parcela_valor_${i}" step="0.01" min="0" value="${valorParcela}" required>
+                    <label>Valor (R$) *</label>
+                    <input type="number" id="parcela_valor_${i}" step="0.01" min="0" placeholder="0.00" required>
                 </div>
             </div>
         `;
@@ -424,6 +444,8 @@ window.gerarParcelas = function() {
     
     html += '</div>';
     container.innerHTML = html;
+    
+    showMessage(`${numParcelas} campos de parcelas gerados. Preencha cada valor e data!`, 'success');
 };
 
 function closeFormModal() {
@@ -435,12 +457,53 @@ function closeFormModal() {
 }
 
 window.switchFormTab = function(index) {
+    const isEditing = document.getElementById('editId')?.value;
+    
+    // Ajustar índice para modo de edição (não tem tab tipo)
+    if (isEditing && index > 0) {
+        index = index;
+    }
+    
     document.querySelectorAll('#formModal .tab-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
     });
     document.querySelectorAll('#formModal .tab-content').forEach((content, i) => {
         content.classList.toggle('active', i === index);
     });
+    
+    // Controlar campos baseado no tipo de registro
+    if (index === 1 && !isEditing) {
+        const tipo = document.getElementById('tipo_registro')?.value;
+        const contaUnica = document.getElementById('conta-unica-fields');
+        const contaParcelada = document.getElementById('conta-parcelada-fields');
+        const dataPagamentoGroup = document.getElementById('data-pagamento-group');
+        
+        if (tipo === 'unica') {
+            if (contaUnica) contaUnica.style.display = 'block';
+            if (contaParcelada) contaParcelada.style.display = 'none';
+            if (dataPagamentoGroup) dataPagamentoGroup.style.display = 'block';
+            
+            // Tornar campos obrigatórios
+            const desc = document.getElementById('descricao');
+            const valor = document.getElementById('valor');
+            const dataVenc = document.getElementById('data_vencimento');
+            if (desc) desc.required = true;
+            if (valor) valor.required = true;
+            if (dataVenc) dataVenc.required = true;
+        } else if (tipo === 'parcelada') {
+            if (contaUnica) contaUnica.style.display = 'none';
+            if (contaParcelada) contaParcelada.style.display = 'block';
+            if (dataPagamentoGroup) dataPagamentoGroup.style.display = 'none';
+            
+            // Remover obrigatoriedade dos campos de conta única
+            const desc = document.getElementById('descricao');
+            const valor = document.getElementById('valor');
+            const dataVenc = document.getElementById('data_vencimento');
+            if (desc) desc.required = false;
+            if (valor) valor.required = false;
+            if (dataVenc) dataVenc.required = false;
+        }
+    }
 };
 
 // ============================================
@@ -450,12 +513,18 @@ async function handleSubmit(event) {
     event.preventDefault();
     
     const editId = document.getElementById('editId').value;
-    const usarParcelamento = !editId && document.getElementById('usar_parcelamento')?.checked;
+    const tipoRegistro = document.getElementById('tipo_registro')?.value;
     
-    if (usarParcelamento) {
-        await salvarParcelas();
-    } else {
+    // Se estiver editando ou for conta única
+    if (editId || tipoRegistro === 'unica') {
         await salvarConta(editId);
+    } 
+    // Se for conta parcelada
+    else if (tipoRegistro === 'parcelada') {
+        await salvarParcelas();
+    }
+    else {
+        showMessage('Selecione o tipo de registro!', 'error');
     }
 }
 
@@ -539,10 +608,20 @@ async function salvarConta(editId) {
 
 async function salvarParcelas() {
     const numParcelas = parseInt(document.getElementById('num_parcelas')?.value) || 2;
-    const descricaoBase = document.getElementById('descricao').value.trim();
+    const descricaoBase = document.getElementById('descricao_base')?.value.trim();
     const formaPagamento = document.getElementById('forma_pagamento').value;
     const banco = document.getElementById('banco').value;
     const observacoes = document.getElementById('observacoes').value.trim() || null;
+    
+    if (!descricaoBase) {
+        showMessage('Preencha a descrição base!', 'error');
+        return;
+    }
+    
+    if (!formaPagamento || !banco) {
+        showMessage('Preencha a forma de pagamento e banco!', 'error');
+        return;
+    }
     
     if (!isOnline) {
         showMessage('Sistema offline. Dados não foram salvos.', 'error');
@@ -553,12 +632,19 @@ async function salvarParcelas() {
     try {
         const parcelas = [];
         
+        // Validar e coletar dados de todas as parcelas
         for (let i = 1; i <= numParcelas; i++) {
             const data = document.getElementById(`parcela_data_${i}`)?.value;
-            const valor = parseFloat(document.getElementById(`parcela_valor_${i}`)?.value);
+            const valorInput = document.getElementById(`parcela_valor_${i}`)?.value;
+            const valor = parseFloat(valorInput);
             
-            if (!data || !valor) {
-                showMessage(`Preencha todos os campos da ${i}ª parcela!`, 'error');
+            if (!data) {
+                showMessage(`Preencha a data da ${i}ª parcela!`, 'error');
+                return;
+            }
+            
+            if (!valorInput || isNaN(valor) || valor <= 0) {
+                showMessage(`Preencha um valor válido para a ${i}ª parcela!`, 'error');
                 return;
             }
             
@@ -577,6 +663,7 @@ async function salvarParcelas() {
         }
         
         // Salvar todas as parcelas
+        let salvos = 0;
         for (const parcela of parcelas) {
             const response = await fetch(`${API_URL}/contas`, {
                 method: 'POST',
@@ -602,9 +689,10 @@ async function salvarParcelas() {
 
             const savedData = await response.json();
             contas.push(savedData);
+            salvos++;
         }
         
-        showMessage(`${numParcelas} parcelas criadas com sucesso!`, 'success');
+        showMessage(`${salvos} parcela${salvos > 1 ? 's' : ''} criada${salvos > 1 ? 's' : ''} com sucesso!`, 'success');
         lastDataHash = JSON.stringify(contas.map(c => c.id));
         updateAllFilters();
         updateDashboard();
