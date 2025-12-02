@@ -18,7 +18,7 @@ console.log('✅ Supabase configurado:', supabaseUrl);
 // MIDDLEWARES
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Token']
 }));
 
@@ -118,7 +118,7 @@ app.get('/api/contas/:id', verificarAutenticacao, async (req, res) => {
 // POST /api/contas
 app.post('/api/contas', verificarAutenticacao, async (req, res) => {
     try {
-        const { descricao, valor, data_vencimento, forma_pagamento, banco, data_pagamento, observacoes, fixa } = req.body;
+        const { descricao, valor, data_vencimento, forma_pagamento, banco, data_pagamento, observacoes, parcela_numero, parcela_total } = req.body;
 
         if (!descricao || !valor || !data_vencimento || !forma_pagamento || !banco) {
             return res.status(400).json({
@@ -135,7 +135,8 @@ app.post('/api/contas', verificarAutenticacao, async (req, res) => {
             banco,
             data_pagamento: data_pagamento || null,
             observacoes: observacoes || null,
-            fixa: fixa || false,
+            parcela_numero: parcela_numero || null,
+            parcela_total: parcela_total || null,
             status: data_pagamento ? 'PAGO' : 'PENDENTE'
         };
 
@@ -157,7 +158,7 @@ app.post('/api/contas', verificarAutenticacao, async (req, res) => {
 // PUT /api/contas/:id
 app.put('/api/contas/:id', verificarAutenticacao, async (req, res) => {
     try {
-        const { descricao, valor, data_vencimento, forma_pagamento, banco, data_pagamento, observacoes, fixa, status } = req.body;
+        const { descricao, valor, data_vencimento, forma_pagamento, banco, data_pagamento, observacoes, parcela_numero, parcela_total, status } = req.body;
 
         const contaAtualizada = {
             descricao,
@@ -167,7 +168,8 @@ app.put('/api/contas/:id', verificarAutenticacao, async (req, res) => {
             banco,
             data_pagamento: data_pagamento || null,
             observacoes: observacoes || null,
-            fixa: fixa || false,
+            parcela_numero: parcela_numero || null,
+            parcela_total: parcela_total || null,
             status: status || (data_pagamento ? 'PAGO' : 'PENDENTE')
         };
 
