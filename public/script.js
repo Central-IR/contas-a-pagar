@@ -268,7 +268,7 @@ function showFormModal(editingId) {
                         <div class="tab-content active" id="tab-conta">
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="documento">Documento</label>
+                                    <label for="documento">Nº Documento</label>
                                     <input type="text" id="documento" value="${conta?.documento || ''}" placeholder="CTE, NF...">
                                 </div>
                                 
