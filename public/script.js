@@ -269,7 +269,7 @@ function showFormModal(editingId) {
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="documento">Documento</label>
-                                    <input type="text" id="documento" value="${conta?.documento || ''}" placeholder="CPF, CNPJ, Nº Contrato, etc.">
+                                    <input type="text" id="documento" value="${conta?.documento || ''}" placeholder="CTE, NF...">
                                 </div>
                                 
                                 <div class="form-group" style="grid-column: 1 / -1;">
@@ -290,6 +290,7 @@ function showFormModal(editingId) {
                                     <label for="forma_pagamento">Forma de Pagamento *</label>
                                     <select id="forma_pagamento" required>
                                         <option value="">Selecione...</option>
+                                        <option value="PIX" ${conta?.forma_pagamento === 'PIX' ? 'selected' : ''}>Pix</option>
                                         <option value="BOLETO" ${conta?.forma_pagamento === 'BOLETO' ? 'selected' : ''}>Boleto</option>
                                         <option value="CARTAO" ${conta?.forma_pagamento === 'CARTAO' ? 'selected' : ''}>Cartão</option>
                                         <option value="DINHEIRO" ${conta?.forma_pagamento === 'DINHEIRO' ? 'selected' : ''}>Dinheiro</option>
@@ -318,8 +319,8 @@ function showFormModal(editingId) {
                                     <input type="date" id="data_pagamento" value="${conta?.data_pagamento || ''}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="num_parcela">Nº Parcela</label>
-                                    <input type="text" id="num_parcela" value="${numParcela}" placeholder="Ex: 1/12">
+                                    <label for="num_parcela">Nº Parcelas</label>
+                                    <input type="text" id="num_parcela" value="${numParcela}" placeholder="1ª PARCELA">
                                 </div>
                             </div>
                         </div>
