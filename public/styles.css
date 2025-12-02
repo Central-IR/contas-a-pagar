@@ -359,6 +359,48 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* PARCELAMENTO */
+.tipo-card {
+    background: var(--input-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 250px;
+    max-width: 300px;
+}
+
+.tipo-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(204, 112, 0, 0.2);
+}
+
+.tipo-card.selected {
+    border-color: var(--primary);
+    background: rgba(204, 112, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(204, 112, 0, 0.3);
+}
+
+.tipo-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.tipo-card h4 {
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.tipo-card p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
 .parcelas-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
