@@ -22,10 +22,6 @@
                 </div>
             </div>
 
-            <div class="button-wrapper">
-                <button onclick="toggleForm()" class="register">Nova Conta</button>
-            </div>
-
             <!-- NAVEGAÇÃO POR MESES -->
             <div class="card">
                 <div class="month-navigation">
@@ -46,10 +42,9 @@
                     <div class="stat-value stat-danger" id="statVencido">0</div>
                     <div class="pulse-badge" id="pulseBadgeVencido" style="display: none;">0</div>
                 </div>
-                <div class="stat-card stat-card-warning" id="cardIminente">
-                    <div class="stat-label">Iminente</div>
-                    <div class="stat-value stat-warning" id="statIminente">0</div>
-                    <div class="pulse-badge" id="pulseBadgeIminente" style="display: none; background: var(--warning-color);">0</div>
+                <div class="stat-card">
+                    <div class="stat-label">Pendente</div>
+                    <div class="stat-value stat-pending" id="statPendente">R$ 0,00</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Valor Total</div>
@@ -86,7 +81,6 @@
                             <option value="">Todos</option>
                             <option value="PAGO">Pago</option>
                             <option value="VENCIDO">Vencido</option>
-                            <option value="IMINENTE">Iminente</option>
                             <option value="PENDENTE">Pendente</option>
                         </select>
                     </div>
@@ -99,6 +93,14 @@
             </div>
         </div>
     </div>
+
+    <!-- BOTÃO FLUTUANTE -->
+    <button onclick="toggleForm()" class="floating-add-btn" title="Nova Conta">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+    </button>
 
     <script>
         // Esconder splash após 3 segundos
