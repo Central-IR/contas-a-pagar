@@ -10,7 +10,7 @@ let lastDataHash = '';
 let sessionToken = null;
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
-let formType = 'simple'; // 'simple' ou 'parcelado'
+let formType = 'simple';
 let numParcelas = 0;
 
 const meses = [
@@ -238,6 +238,7 @@ window.toggleForm = function() {
 function showFormModal(editingId) {
     const isEditing = editingId !== null;
     let conta = null;
+    let grupoContas = [];
     
     if (isEditing) {
         conta = contas.find(c => String(c.id) === String(editingId));
@@ -245,9 +246,14 @@ function showFormModal(editingId) {
             showMessage('Conta não encontrada!', 'error');
             return;
         }
+        
+        // Buscar todas as parcelas do mesmo grupo
+        if (conta.grupo_id) {
+            grupoContas = contas.filter(c => c.grupo_id === conta.grupo_id)
+                .sort((a, b) => (a.parcela_numero || 0) - (b.parcela_numero || 0));
+        }
     }
 
-    // Reset form type
     formType = 'simple';
     numParcelas = 0;
 
@@ -255,10 +261,9 @@ function showFormModal(editingId) {
         <div class="modal-overlay" id="formModal">
             <div class="modal-content modal-large">
                 <div class="modal-header">
-                    <h3 class="modal-title">${isEditing ? 'Editar Conta' : 'Nova Conta'}</h3>
+                    <h3 class="modal-title">${isEditing ? 'Editar Conta/Parcelas' : 'Nova Conta'}</h3>
                 </div>
                 
-                <!-- SELETOR DE TIPO DE CADASTRO -->
                 ${!isEditing ? `
                 <div class="form-type-selector">
                     <button type="button" class="form-type-btn active" onclick="selectFormType('simple')">
@@ -271,7 +276,9 @@ function showFormModal(editingId) {
                 ` : ''}
                 
                 <div id="formContainer">
-                    ${renderSimpleForm(conta, editingId, isEditing)}
+                    ${isEditing && grupoContas.length > 1 
+                        ? renderEditParceladoForm(grupoContas) 
+                        : renderSimpleForm(conta, editingId, isEditing)}
                 </div>
             </div>
         </div>
@@ -379,12 +386,109 @@ function renderSimpleForm(conta, editingId, isEditing) {
     `;
 }
 
+function renderEditParceladoForm(grupoContas) {
+    const primeiraParcelaDoc = grupoContas[0];
+    
+    let tabsHTML = '<div class="tabs-nav">';
+    tabsHTML += '<button class="tab-btn active" onclick="switchFormTab(0)">Dados Gerais</button>';
+    
+    grupoContas.forEach((parcela, index) => {
+        tabsHTML += `<button class="tab-btn" onclick="switchFormTab(${index + 1})">${parcela.parcela_numero}ª Parcela</button>`;
+    });
+    tabsHTML += '</div>';
+    
+    let contentHTML = `
+        <form id="contaForm" onsubmit="handleSubmitEditParcelas(event)">
+            <input type="hidden" id="grupo_id" value="${primeiraParcelaDoc.grupo_id || ''}">
+            
+            <div class="tab-content active" id="tab-geral">
+                <div class="form-grid-compact">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="documento">NF / Documento</label>
+                            <input type="text" id="documento" value="${primeiraParcelaDoc.documento || ''}" placeholder="NF, CTE...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="descricao">Descrição *</label>
+                            <input type="text" id="descricao" value="${primeiraParcelaDoc.descricao}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group form-group-full">
+                            <label for="observacoes">Observação</label>
+                            <input type="text" id="observacoes" value="${primeiraParcelaDoc.observacoes || ''}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+    `;
+    
+    grupoContas.forEach((parcela, index) => {
+        contentHTML += `
+            <div class="tab-content" id="tab-parcela-${index}">
+                <input type="hidden" class="parcela-id" value="${parcela.id}">
+                <div class="form-grid-compact">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="parcela_forma_${index}">Forma de Pagamento *</label>
+                            <select id="parcela_forma_${index}" class="parcela-field" required>
+                                <option value="">Selecione...</option>
+                                <option value="PIX" ${parcela.forma_pagamento === 'PIX' ? 'selected' : ''}>Pix</option>
+                                <option value="BOLETO" ${parcela.forma_pagamento === 'BOLETO' ? 'selected' : ''}>Boleto</option>
+                                <option value="CARTAO" ${parcela.forma_pagamento === 'CARTAO' ? 'selected' : ''}>Cartão</option>
+                                <option value="DINHEIRO" ${parcela.forma_pagamento === 'DINHEIRO' ? 'selected' : ''}>Dinheiro</option>
+                                <option value="TRANSFERENCIA" ${parcela.forma_pagamento === 'TRANSFERENCIA' ? 'selected' : ''}>Transferência</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="parcela_banco_${index}">Banco *</label>
+                            <select id="parcela_banco_${index}" class="parcela-field" required>
+                                <option value="">Selecione...</option>
+                                <option value="BANCO DO BRASIL" ${parcela.banco === 'BANCO DO BRASIL' ? 'selected' : ''}>Banco do Brasil</option>
+                                <option value="BRADESCO" ${parcela.banco === 'BRADESCO' ? 'selected' : ''}>Bradesco</option>
+                                <option value="SICOOB" ${parcela.banco === 'SICOOB' ? 'selected' : ''}>Sicoob</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="parcela_vencimento_${index}">Data de Vencimento *</label>
+                            <input type="date" id="parcela_vencimento_${index}" value="${parcela.data_vencimento}" class="parcela-field" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="parcela_valor_${index}">Valor (R$) *</label>
+                            <input type="number" id="parcela_valor_${index}" step="0.01" min="0" value="${parcela.valor}" class="parcela-field" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="parcela_pagamento_${index}">Data do Pagamento</label>
+                            <input type="date" id="parcela_pagamento_${index}" value="${parcela.data_pagamento || ''}" class="parcela-field">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    contentHTML += `
+            <div class="modal-actions">
+                <button type="submit" class="save">Salvar Todas as Parcelas</button>
+                <button type="button" class="danger" onclick="closeFormModal()">Cancelar</button>
+            </div>
+        </form>
+    `;
+    
+    return `<div class="tabs-container">${tabsHTML}${contentHTML}</div>`;
+}
+
 function renderParceladoForm() {
     return `
         <div class="tabs-container">
             <div class="tabs-nav" id="parceladoTabsNav">
                 <button class="tab-btn active" onclick="switchFormTab(0)">Dados da Conta</button>
-                <button class="tab-btn" onclick="switchFormTab(1)">Pagamento</button>
                 <button class="tab-btn add-parcela-btn" onclick="addParcelaTab()">+ Adicionar Parcela</button>
             </div>
 
@@ -412,33 +516,9 @@ function renderParceladoForm() {
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="tab-content" id="tab-pagamento">
-                    <div class="form-grid-compact">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="forma_pagamento">Forma de Pagamento *</label>
-                                <select id="forma_pagamento" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="BOLETO">Boleto</option>
-                                    <option value="CARTAO">Cartão</option>
-                                    <option value="DINHEIRO">Dinheiro</option>
-                                    <option value="TRANSFERENCIA">Transferência</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="banco">Banco *</label>
-                                <select id="banco" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="BANCO DO BRASIL">Banco do Brasil</option>
-                                    <option value="BRADESCO">Bradesco</option>
-                                    <option value="SICOOB">Sicoob</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
+                    <p style="color: var(--text-secondary); margin-top: 1rem;">
+                        <strong>Atenção:</strong> Adicione as parcelas nas próximas abas. Cada parcela pode ter forma de pagamento e banco diferentes.
+                    </p>
                 </div>
 
                 <div id="parcelasContainer"></div>
@@ -455,13 +535,11 @@ function renderParceladoForm() {
 window.selectFormType = function(type) {
     formType = type;
     
-    // Atualizar botões de seleção
     document.querySelectorAll('.form-type-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     event.target.classList.add('active');
     
-    // Renderizar formulário apropriado
     const container = document.getElementById('formContainer');
     if (type === 'simple') {
         container.innerHTML = renderSimpleForm(null, '', false);
@@ -477,15 +555,13 @@ window.addParcelaTab = function() {
     const tabsNav = document.getElementById('parceladoTabsNav');
     const addBtn = tabsNav.querySelector('.add-parcela-btn');
     
-    // Adicionar nova aba antes do botão "+"
     const newTab = document.createElement('button');
     newTab.className = 'tab-btn';
     newTab.setAttribute('data-parcela-num', numParcelas);
-    newTab.onclick = () => switchFormTab(numParcelas + 1);
+    newTab.onclick = () => switchFormTab(numParcelas);
     newTab.innerHTML = `${numParcelas}ª Parcela <span class="remove-tab" onclick="event.stopPropagation(); removeParcelaTab(${numParcelas})">×</span>`;
     tabsNav.insertBefore(newTab, addBtn);
     
-    // Adicionar conteúdo da parcela
     const parcelasContainer = document.getElementById('parcelasContainer');
     const parcelaContent = document.createElement('div');
     parcelaContent.className = 'tab-content';
@@ -495,34 +571,58 @@ window.addParcelaTab = function() {
         <div class="form-grid-compact">
             <div class="form-row">
                 <div class="form-group">
+                    <label for="parcela_forma_${numParcelas}">Forma de Pagamento *</label>
+                    <select id="parcela_forma_${numParcelas}" class="parcela-field" required>
+                        <option value="">Selecione...</option>
+                        <option value="PIX">Pix</option>
+                        <option value="BOLETO">Boleto</option>
+                        <option value="CARTAO">Cartão</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="TRANSFERENCIA">Transferência</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="parcela_banco_${numParcelas}">Banco *</label>
+                    <select id="parcela_banco_${numParcelas}" class="parcela-field" required>
+                        <option value="">Selecione...</option>
+                        <option value="BANCO DO BRASIL">Banco do Brasil</option>
+                        <option value="BRADESCO">Bradesco</option>
+                        <option value="SICOOB">Sicoob</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
                     <label for="parcela_vencimento_${numParcelas}">Data de Vencimento *</label>
                     <input type="date" id="parcela_vencimento_${numParcelas}" class="parcela-field" required>
                 </div>
+                
                 <div class="form-group">
                     <label for="parcela_valor_${numParcelas}">Valor (R$) *</label>
                     <input type="number" id="parcela_valor_${numParcelas}" step="0.01" min="0" class="parcela-field" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="parcela_pagamento_${numParcelas}">Data do Pagamento</label>
+                    <input type="date" id="parcela_pagamento_${numParcelas}" class="parcela-field">
                 </div>
             </div>
         </div>
     `;
     parcelasContainer.appendChild(parcelaContent);
     
-    // Ativar a nova aba
-    switchFormTab(numParcelas + 1);
+    switchFormTab(numParcelas);
 };
 
 window.removeParcelaTab = function(parcelaNum) {
     if (!confirm(`Remover ${parcelaNum}ª Parcela?`)) return;
     
-    // Remover aba
     const tab = document.querySelector(`#parceladoTabsNav .tab-btn[data-parcela-num="${parcelaNum}"]`);
     if (tab) tab.remove();
     
-    // Remover conteúdo
     const content = document.getElementById(`tab-parcela-${parcelaNum}`);
     if (content) content.remove();
     
-    // Renumerar parcelas restantes
     renumberParcelas();
 };
 
@@ -540,7 +640,7 @@ function renumberParcelas() {
         
         tab.setAttribute('data-parcela-num', newNum);
         tab.innerHTML = `${newNum}ª Parcela <span class="remove-tab" onclick="event.stopPropagation(); removeParcelaTab(${newNum})">×</span>`;
-        tab.onclick = () => switchFormTab(newNum + 1);
+        tab.onclick = () => switchFormTab(newNum);
     });
     
     contents.forEach((content, index) => {
@@ -550,16 +650,17 @@ function renumberParcelas() {
         content.setAttribute('data-parcela-num', newNum);
         content.id = `tab-parcela-${newNum}`;
         
-        // Atualizar IDs dos campos
-        const vencField = content.querySelector('input[type="date"]');
+        const formaField = content.querySelector('select[id^="parcela_forma_"]');
+        const bancoField = content.querySelector('select[id^="parcela_banco_"]');
+        const vencField = content.querySelector('input[type="date"][id^="parcela_vencimento_"]');
         const valorField = content.querySelector('input[type="number"]');
+        const pagtoField = content.querySelector('input[type="date"][id^="parcela_pagamento_"]');
         
-        if (vencField) {
-            vencField.id = `parcela_vencimento_${newNum}`;
-        }
-        if (valorField) {
-            valorField.id = `parcela_valor_${newNum}`;
-        }
+        if (formaField) formaField.id = `parcela_forma_${newNum}`;
+        if (bancoField) bancoField.id = `parcela_banco_${newNum}`;
+        if (vencField) vencField.id = `parcela_vencimento_${newNum}`;
+        if (valorField) valorField.id = `parcela_valor_${newNum}`;
+        if (pagtoField) pagtoField.id = `parcela_pagamento_${newNum}`;
     });
     
     numParcelas = newNum;
@@ -605,6 +706,124 @@ async function handleSubmit(event) {
     await salvarConta(editId);
 }
 
+async function handleSubmitEditParcelas(event) {
+    event.preventDefault();
+    
+    const grupo_id = document.getElementById('grupo_id').value;
+    const documento = document.getElementById('documento')?.value?.trim() || null;
+    const descricao = document.getElementById('descricao')?.value?.trim();
+    const observacoes = document.getElementById('observacoes')?.value?.trim() || null;
+    
+    if (!descricao) {
+        showMessage('Por favor, preencha a descrição!', 'error');
+        return;
+    }
+    
+    const parcelasIds = Array.from(document.querySelectorAll('.parcela-id')).map(input => input.value);
+    const parcelas = [];
+    
+    parcelasIds.forEach((id, index) => {
+        const forma = document.getElementById(`parcela_forma_${index}`)?.value;
+        const banco = document.getElementById(`parcela_banco_${index}`)?.value;
+        const vencimento = document.getElementById(`parcela_vencimento_${index}`)?.value;
+        const valor = document.getElementById(`parcela_valor_${index}`)?.value;
+        const pagamento = document.getElementById(`parcela_pagamento_${index}`)?.value || null;
+        
+        if (!forma || !banco || !vencimento || !valor) {
+            showMessage(`Parcela ${index + 1}: Preencha todos os campos obrigatórios!`, 'error');
+            return;
+        }
+        
+        parcelas.push({
+            id: id,
+            forma_pagamento: forma,
+            banco: banco,
+            data_vencimento: vencimento,
+            valor: parseFloat(valor),
+            data_pagamento: pagamento,
+            documento: documento,
+            descricao: descricao,
+            observacoes: observacoes,
+            status: pagamento ? 'PAGO' : 'PENDENTE'
+        });
+    });
+    
+    if (parcelas.length === 0) return;
+    
+    if (!isOnline) {
+        showMessage('Sistema offline. Dados não foram salvos.', 'error');
+        closeFormModal();
+        return;
+    }
+    
+    try {
+        let sucessos = 0;
+        let erros = [];
+        
+        for (const [index, parcela] of parcelas.entries()) {
+            try {
+                console.log(`Atualizando parcela ${index + 1}:`, parcela);
+
+                const response = await fetch(`${API_URL}/contas/${parcela.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-Token': sessionToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(parcela),
+                    mode: 'cors'
+                });
+
+                if (response.status === 401) {
+                    sessionStorage.removeItem('contasPagarSession');
+                    mostrarTelaAcessoNegado('Sua sessão expirou');
+                    return;
+                }
+
+                if (response.ok) {
+                    const savedData = await response.json();
+                    const contaIndex = contas.findIndex(c => String(c.id) === String(parcela.id));
+                    if (contaIndex !== -1) contas[contaIndex] = savedData;
+                    sucessos++;
+                } else {
+                    let errorMsg = 'Erro desconhecido';
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorData.message || `Erro ${response.status}`;
+                    } catch (e) {
+                        errorMsg = `Erro ${response.status}: ${response.statusText}`;
+                    }
+                    erros.push(`Parcela ${index + 1}: ${errorMsg}`);
+                }
+            } catch (error) {
+                console.error(`Erro na parcela ${index + 1}:`, error);
+                erros.push(`Parcela ${index + 1}: ${error.message}`);
+            }
+        }
+        
+        if (sucessos === parcelas.length) {
+            showMessage(`${sucessos} parcelas atualizadas com sucesso!`, 'success');
+            lastDataHash = JSON.stringify(contas.map(c => c.id));
+            updateAllFilters();
+            updateDashboard();
+            filterContas();
+            closeFormModal();
+        } else if (sucessos > 0) {
+            showMessage(`${sucessos} de ${parcelas.length} parcelas atualizadas. Erros: ${erros.join('; ')}`, 'error');
+            lastDataHash = JSON.stringify(contas.map(c => c.id));
+            updateAllFilters();
+            updateDashboard();
+            filterContas();
+        } else {
+            showMessage(`Falha ao atualizar parcelas. Erros: ${erros.join('; ')}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro geral:', error);
+        showMessage(`Erro: ${error.message}`, 'error');
+    }
+}
+
 async function handleSubmitParcelado(event) {
     event.preventDefault();
     
@@ -613,52 +832,51 @@ async function handleSubmitParcelado(event) {
         return;
     }
     
-    // Validar campos comuns
     const descricao = document.getElementById('descricao')?.value?.trim();
-    const formaPagamento = document.getElementById('forma_pagamento')?.value;
-    const banco = document.getElementById('banco')?.value;
 
-    if (!descricao || !formaPagamento || !banco) {
-        showMessage('Por favor, preencha todos os campos obrigatórios das abas 1 e 2.', 'error');
+    if (!descricao) {
+        showMessage('Por favor, preencha a descrição.', 'error');
         return;
     }
 
-    // Coletar dados comuns
     const dadosComuns = {
         documento: document.getElementById('documento')?.value?.trim() || null,
         descricao: descricao,
         observacoes: document.getElementById('observacoes')?.value?.trim() || null,
-        forma_pagamento: formaPagamento,
-        banco: banco,
     };
     
-    // Coletar e validar dados de cada parcela
     const parcelas = [];
+    const grupoId = self.crypto.randomUUID();
+    
     for (let i = 1; i <= numParcelas; i++) {
-        const vencimento = document.getElementById(`parcela_vencimento_${i}`);
-        const valor = document.getElementById(`parcela_valor_${i}`);
+        const forma = document.getElementById(`parcela_forma_${i}`)?.value;
+        const banco = document.getElementById(`parcela_banco_${i}`)?.value;
+        const vencimento = document.getElementById(`parcela_vencimento_${i}`)?.value;
+        const valor = document.getElementById(`parcela_valor_${i}`)?.value;
+        const pagamento = document.getElementById(`parcela_pagamento_${i}`)?.value || null;
         
-        if (!vencimento || !vencimento.value) {
-            showMessage(`Parcela ${i}: Data de vencimento não preenchida!`, 'error');
+        if (!forma || !banco || !vencimento || !valor) {
+            showMessage(`Parcela ${i}: Preencha todos os campos obrigatórios!`, 'error');
             return;
         }
         
-        if (!valor || !valor.value || parseFloat(valor.value) <= 0) {
+        if (parseFloat(valor) <= 0) {
             showMessage(`Parcela ${i}: Valor inválido!`, 'error');
             return;
         }
         
-        if (vencimento && valor) {
-            parcelas.push({
-                ...dadosComuns,
-                data_vencimento: vencimento.value,
-                valor: parseFloat(valor.value),
-                parcela_numero: i,
-                parcela_total: numParcelas,
-                status: 'PENDENTE',
-                data_pagamento: null
-            });
-        }
+        parcelas.push({
+            ...dadosComuns,
+            forma_pagamento: forma,
+            banco: banco,
+            data_vencimento: vencimento,
+            valor: parseFloat(valor),
+            data_pagamento: pagamento,
+            parcela_numero: i,
+            parcela_total: numParcelas,
+            grupo_id: grupoId,
+            status: pagamento ? 'PAGO' : 'PENDENTE'
+        });
     }
     
     if (parcelas.length === 0) {
@@ -672,14 +890,13 @@ async function handleSubmitParcelado(event) {
         return;
     }
     
-    // Salvar todas as parcelas
     try {
         let sucessos = 0;
         let erros = [];
         
         for (const [index, parcela] of parcelas.entries()) {
             try {
-                console.log(`Enviando parcela ${index + 1}:`, parcela); // Debug
+                console.log(`Enviando parcela ${index + 1}:`, parcela);
 
                 const response = await fetch(`${API_URL}/contas`, {
                     method: 'POST',
@@ -741,7 +958,6 @@ async function handleSubmitParcelado(event) {
 }
 
 async function salvarConta(editId) {
-    // Validação dos campos obrigatórios
     const descricao = document.getElementById('descricao')?.value?.trim();
     const valor = document.getElementById('valor')?.value;
     const dataVencimento = document.getElementById('data_vencimento')?.value;
@@ -764,30 +980,27 @@ async function salvarConta(editId) {
         observacoes: document.getElementById('observacoes')?.value?.trim() || null,
     };
 
-    // Validar valor numérico
     if (isNaN(formData.valor) || formData.valor <= 0) {
         showMessage('Valor inválido. Digite um número maior que zero.', 'error');
         return;
     }
 
-    // Apenas para edição, manter parcela_numero e parcela_total
     if (editId) {
         const conta = contas.find(c => String(c.id) === String(editId));
         if (conta) {
             formData.parcela_numero = conta.parcela_numero;
             formData.parcela_total = conta.parcela_total;
-        }
-    }
-
-    if (editId) {
-        const conta = contas.find(c => String(c.id) === String(editId));
-        if (conta && !formData.data_pagamento) {
-            formData.status = conta.status;
-        } else {
-            formData.status = formData.data_pagamento ? 'PAGO' : 'PENDENTE';
+            formData.grupo_id = conta.grupo_id;
+            
+            if (!formData.data_pagamento) {
+                formData.status = conta.status;
+            } else {
+                formData.status = 'PAGO';
+            }
         }
     } else {
         formData.status = formData.data_pagamento ? 'PAGO' : 'PENDENTE';
+        formData.grupo_id = self.crypto.randomUUID();
     }
 
     if (!isOnline) {
@@ -800,7 +1013,7 @@ async function salvarConta(editId) {
         const url = editId ? `${API_URL}/contas/${editId}` : `${API_URL}/contas`;
         const method = editId ? 'PUT' : 'POST';
 
-        console.log('Enviando dados:', formData); // Debug
+        console.log('Enviando dados:', formData);
 
         const response = await fetch(url, {
             method,
