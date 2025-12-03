@@ -334,7 +334,7 @@ h1 {
 
 .form-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1rem;
     align-items: end;
 }
@@ -343,28 +343,9 @@ h1 {
     margin-bottom: 0;
 }
 
-/* Larguras especiais */
-.form-group-wide {
-    grid-column: span 2;
-}
-
+/* Campo que ocupa linha inteira */
 .form-group-full {
     grid-column: 1 / -1;
-}
-
-/* Ajuste para 2 campos */
-.form-row:has(.form-group:nth-child(2):last-child) {
-    grid-template-columns: 1fr 1fr;
-}
-
-/* Ajuste para 3 campos */
-.form-row:has(.form-group:nth-child(3):last-child) {
-    grid-template-columns: repeat(3, 1fr);
-}
-
-/* Ajuste para 4 campos */
-.form-row:has(.form-group:nth-child(4):last-child) {
-    grid-template-columns: repeat(4, 1fr);
 }
 
 label {
@@ -872,10 +853,6 @@ tbody tr:hover { background: var(--table-hover); }
     /* Layout compacto em mobile - empilhar campos */
     .form-row {
         grid-template-columns: 1fr !important;
-    }
-    
-    .form-group-wide {
-        grid-column: 1;
     }
     
     .modal-content { padding: 1.5rem; width: 95%; }
