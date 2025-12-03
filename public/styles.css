@@ -448,7 +448,7 @@ td:nth-child(2) { max-width: 250px; }  /* Descrição */
 td:nth-child(3) { max-width: 120px; white-space: nowrap; }  /* Valor */
 td:nth-child(4) { max-width: 120px; white-space: nowrap; }  /* Vencimento */
 td:nth-child(5) { max-width: 100px; text-align: center; }  /* Nº Parcelas */
-td:nth-child(6) { max-width: 200px; }  /* Observação */
+td:nth-child(6) { max-width: 150px; }  /* Banco */
 td:nth-child(7) { max-width: 120px; white-space: nowrap; }  /* Data Pagamento */
 td:nth-child(8) { max-width: 100px; white-space: nowrap; }  /* Status */
 td:nth-child(9) { min-width: 260px; white-space: nowrap; }  /* Ações */
@@ -457,6 +457,7 @@ th:nth-child(1) { width: 60px; }  /* Checkbox header */
 th:nth-child(3) { width: 120px; }  /* Valor header */
 th:nth-child(4) { width: 120px; }  /* Vencimento header */
 th:nth-child(5) { width: 100px; text-align: center; }  /* Nº Parcelas header */
+th:nth-child(6) { width: 150px; }  /* Banco header */
 th:nth-child(7) { width: 120px; }  /* Data Pagamento header */
 th:nth-child(8) { width: 100px; }  /* Status header */
 th:nth-child(9) { width: 260px; text-align: center; }  /* Ações header */
@@ -768,7 +769,7 @@ tbody tr:hover { background: var(--table-hover); }
     
     /* Ajustar larguras para mobile */
     td:nth-child(2) { max-width: 150px; font-size: 0.75rem; }  /* Descrição menor */
-    td:nth-child(6) { max-width: 120px; font-size: 0.75rem; }  /* Observação menor */
+    td:nth-child(6) { max-width: 120px; font-size: 0.75rem; }  /* Banco menor */
     td:nth-child(9) { min-width: 200px; }  /* Ações */
     
     .action-btn { 
