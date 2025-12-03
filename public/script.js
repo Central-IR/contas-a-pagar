@@ -305,7 +305,7 @@ function renderSimpleForm(conta, editingId, isEditing) {
                                 <input type="text" id="documento" value="${conta?.documento || ''}" placeholder="NF, CTE...">
                             </div>
                             
-                            <div class="form-group form-group-wide">
+                            <div class="form-group">
                                 <label for="descricao">Descrição *</label>
                                 <input type="text" id="descricao" value="${conta?.descricao || ''}" required>
                             </div>
@@ -344,9 +344,7 @@ function renderSimpleForm(conta, editingId, isEditing) {
                                     <option value="SICOOB" ${conta?.banco === 'SICOOB' ? 'selected' : ''}>Sicoob</option>
                                 </select>
                             </div>
-                        </div>
-                        
-                        <div class="form-row">
+                            
                             <div class="form-group">
                                 <label for="data_vencimento">Data de Vencimento *</label>
                                 <input type="date" id="data_vencimento" value="${conta?.data_vencimento || ''}" required>
@@ -401,7 +399,7 @@ function renderParceladoForm() {
                                 <input type="text" id="documento" value="" placeholder="NF, CTE...">
                             </div>
                             
-                            <div class="form-group form-group-wide">
+                            <div class="form-group">
                                 <label for="descricao">Descrição *</label>
                                 <input type="text" id="descricao" value="" required>
                             </div>
