@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const { v4: uuidv4 } = require('uuid');
 const app = express();
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -83,6 +84,36 @@ async function verificarAutenticacao(req, res, next) {
     }
 }
 
+// =====================================================
+// NOVO: GET /api/contas/grupo/:grupoId
+// Retorna todas as parcelas de um grupo
+// =====================================================
+app.get('/api/contas/grupo/:grupoId', verificarAutenticacao, async (req, res) => {
+    try {
+        console.log(`📋 Buscando parcelas do grupo: ${req.params.grupoId}`);
+        const { data, error } = await supabase
+            .from('contas_pagar')
+            .select('*')
+            .eq('grupo_id', req.params.grupoId)
+            .order('parcela_numero', { ascending: true });
+
+        if (error) {
+            console.error('❌ Erro Supabase:', error);
+            throw error;
+        }
+        
+        console.log(`✅ ${data?.length || 0} parcelas encontradas`);
+        res.json(data || []);
+    } catch (error) {
+        console.error('❌ Erro ao buscar parcelas do grupo:', error.message);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Erro ao buscar parcelas do grupo',
+            message: error.message
+        });
+    }
+});
+
 // GET /api/contas
 app.get('/api/contas', verificarAutenticacao, async (req, res) => {
     try {
@@ -145,7 +176,7 @@ app.get('/api/contas/:id', verificarAutenticacao, async (req, res) => {
 app.post('/api/contas', verificarAutenticacao, async (req, res) => {
     try {
         console.log('➕ Criando nova conta...');
-        const { documento, descricao, valor, data_vencimento, forma_pagamento, banco, data_pagamento, observacoes, parcela_numero, parcela_total, status } = req.body;
+        const { documento, descricao, valor, data_vencimento, forma_pagamento, banco, data_pagamento, observacoes, parcela_numero, parcela_total, status, grupo_id } = req.body;
 
         // Validação detalhada
         const camposObrigatorios = { descricao, valor, data_vencimento, forma_pagamento, banco };
@@ -183,6 +214,9 @@ app.post('/api/contas', verificarAutenticacao, async (req, res) => {
             });
         }
 
+        // Gerar grupo_id se não fornecido
+        const finalGrupoId = grupo_id || uuidv4();
+
         const novaConta = {
             documento: documento || null,
             descricao,
@@ -194,7 +228,8 @@ app.post('/api/contas', verificarAutenticacao, async (req, res) => {
             observacoes: observacoes || null,
             parcela_numero: parcela_numero || null,
             parcela_total: parcela_total || null,
-            status: status || (data_pagamento ? 'PAGO' : 'PENDENTE')
+            status: status || (data_pagamento ? 'PAGO' : 'PENDENTE'),
+            grupo_id: finalGrupoId
         };
 
         console.log('📤 Dados a inserir:', JSON.stringify(novaConta, null, 2));
