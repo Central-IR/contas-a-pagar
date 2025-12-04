@@ -1,13 +1,13 @@
 {
-  "name": "contas-a-pagar",
+  "name": "ordem-compra",
   "version": "1.0.0",
-  "description": "Sistema de Contas a Pagar",
+  "description": "Sistema de Ordem de Compra",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": ["contas", "financeiro", "gestao"],
+  "keywords": ["ordem", "compra", "gestao"],
   "author": "",
   "license": "ISC",
   "dependencies": {
