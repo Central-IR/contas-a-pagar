@@ -1157,7 +1157,7 @@ async function salvarContaOtimista() {
 }
 
 // ============================================
-// SUBMIT EDIÇÃO DE GRUPO
+// SUBMIT EDIÇÃO DE GRUPO OTIMIZADO
 // ============================================
 async function handleEditSubmit(event) {
     event.preventDefault();
@@ -1166,9 +1166,9 @@ async function handleEditSubmit(event) {
     const temParcelas = document.getElementById('temParcelas')?.value === 'true';
     
     if (!temParcelas) {
-        // É uma conta simples - usar a mesma lógica do salvarConta
+        // É uma conta simples - usar edição otimista
         const editId = document.getElementById('editId').value;
-        await salvarConta(editId);
+        await editarContaOtimista(editId);
         return;
     }
     
@@ -1191,23 +1191,32 @@ async function handleEditSubmit(event) {
         return;
     }
     
-    try {
-        let sucessos = 0;
-        let erros = [];
+    // ====== EDIÇÃO OTIMISTA PARA PARCELAS ======
+    
+    // 1. Coletar todas as atualizações
+    const atualizacoes = [];
+    const backupOriginal = [];
+    
+    // Backup e atualização local das parcelas existentes
+    for (const parcela of parcelasDoGrupo) {
+        if (parcela.isNew) continue;
         
-        // Atualizar parcelas existentes
-        for (const parcela of parcelasDoGrupo) {
-            if (parcela.isNew) continue; // Pular novas parcelas por enquanto
+        const vencInput = document.getElementById(`parcela_vencimento_${parcela.id}`);
+        const valorInput = document.getElementById(`parcela_valor_${parcela.id}`);
+        const pagInput = document.getElementById(`parcela_pagamento_${parcela.id}`);
+        const formaPagInput = document.getElementById(`parcela_forma_pagamento_${parcela.id}`);
+        const bancoInput = document.getElementById(`parcela_banco_${parcela.id}`);
+        
+        if (!vencInput || !valorInput || !formaPagInput || !bancoInput) continue;
+        
+        const index = contas.findIndex(c => String(c.id) === String(parcela.id));
+        if (index !== -1) {
+            // Fazer backup
+            backupOriginal.push({ index, data: {...contas[index]} });
             
-            const vencInput = document.getElementById(`parcela_vencimento_${parcela.id}`);
-            const valorInput = document.getElementById(`parcela_valor_${parcela.id}`);
-            const pagInput = document.getElementById(`parcela_pagamento_${parcela.id}`);
-            const formaPagInput = document.getElementById(`parcela_forma_pagamento_${parcela.id}`);
-            const bancoInput = document.getElementById(`parcela_banco_${parcela.id}`);
-            
-            if (!vencInput || !valorInput || !formaPagInput || !bancoInput) continue;
-            
-            const parcelaData = {
+            // Atualizar localmente
+            contas[index] = {
+                ...contas[index],
                 ...dadosComuns,
                 valor: parseFloat(valorInput.value),
                 data_vencimento: vencInput.value,
@@ -1216,58 +1225,63 @@ async function handleEditSubmit(event) {
                 banco: bancoInput.value,
                 status: pagInput?.value ? 'PAGO' : 'PENDENTE',
                 parcela_numero: parcela.parcela_numero,
-                parcela_total: parcelasDoGrupo.filter(p => !p.isNew).length
+                parcela_total: parcelasDoGrupo.filter(p => !p.isNew).length,
+                synced: false
             };
             
-            try {
-                const response = await fetch(`${API_URL}/contas/${parcela.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Session-Token': sessionToken,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(parcelaData),
-                    mode: 'cors'
-                });
-
-                if (tratarErroAutenticacao(response)) return;
-
-                if (response.ok) {
-                    const savedData = await response.json();
-                    const index = contas.findIndex(c => String(c.id) === String(parcela.id));
-                    if (index !== -1) contas[index] = savedData;
-                    sucessos++;
-                } else {
-                    let errorMsg = 'Erro desconhecido';
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorData.message || `Erro ${response.status}`;
-                    } catch (e) {
-                        errorMsg = `Erro ${response.status}: ${response.statusText}`;
-                    }
-                    erros.push(`Parcela ${parcela.parcela_numero}: ${errorMsg}`);
+            // Adicionar à lista de atualizações
+            atualizacoes.push({
+                id: parcela.id,
+                data: {
+                    ...dadosComuns,
+                    valor: parseFloat(valorInput.value),
+                    data_vencimento: vencInput.value,
+                    data_pagamento: pagInput?.value || null,
+                    forma_pagamento: formaPagInput.value,
+                    banco: bancoInput.value,
+                    status: pagInput?.value ? 'PAGO' : 'PENDENTE',
+                    parcela_numero: parcela.parcela_numero,
+                    parcela_total: parcelasDoGrupo.filter(p => !p.isNew).length
                 }
-            } catch (error) {
-                console.error(`Erro na parcela ${parcela.parcela_numero}:`, error);
-                erros.push(`Parcela ${parcela.parcela_numero}: ${error.message}`);
-            }
+            });
         }
+    }
+    
+    // Adicionar novas parcelas temporariamente
+    const novasParcelas = parcelasDoGrupo.filter(p => p.isNew);
+    const totalParcelas = parcelasDoGrupo.length;
+    
+    for (const novaParcela of novasParcelas) {
+        const vencInput = document.getElementById(`parcela_vencimento_${novaParcela.id}`);
+        const valorInput = document.getElementById(`parcela_valor_${novaParcela.id}`);
+        const pagInput = document.getElementById(`parcela_pagamento_${novaParcela.id}`);
+        const formaPagInput = document.getElementById(`parcela_forma_pagamento_${novaParcela.id}`);
+        const bancoInput = document.getElementById(`parcela_banco_${novaParcela.id}`);
         
-        // Criar novas parcelas
-        const novasParcelas = parcelasDoGrupo.filter(p => p.isNew);
-        const totalParcelas = parcelasDoGrupo.length;
+        if (!vencInput || !valorInput || !formaPagInput || !bancoInput) continue;
         
-        for (const novaParcela of novasParcelas) {
-            const vencInput = document.getElementById(`parcela_vencimento_${novaParcela.id}`);
-            const valorInput = document.getElementById(`parcela_valor_${novaParcela.id}`);
-            const pagInput = document.getElementById(`parcela_pagamento_${novaParcela.id}`);
-            const formaPagInput = document.getElementById(`parcela_forma_pagamento_${novaParcela.id}`);
-            const bancoInput = document.getElementById(`parcela_banco_${novaParcela.id}`);
-            
-            if (!vencInput || !valorInput || !formaPagInput || !bancoInput) continue;
-            
-            const novaParcelaData = {
+        const tempParcela = {
+            ...dadosComuns,
+            valor: parseFloat(valorInput.value),
+            data_vencimento: vencInput.value,
+            data_pagamento: pagInput?.value || null,
+            forma_pagamento: formaPagInput.value,
+            banco: bancoInput.value,
+            status: pagInput?.value ? 'PAGO' : 'PENDENTE',
+            parcela_numero: novaParcela.parcela_numero,
+            parcela_total: totalParcelas,
+            grupo_id: currentGrupoId,
+            id: null,
+            tempId: novaParcela.id,
+            synced: false
+        };
+        
+        contas.push(tempParcela);
+        
+        atualizacoes.push({
+            isNew: true,
+            tempId: novaParcela.id,
+            data: {
                 ...dadosComuns,
                 valor: parseFloat(valorInput.value),
                 data_vencimento: vencInput.value,
@@ -1278,48 +1292,112 @@ async function handleEditSubmit(event) {
                 parcela_numero: novaParcela.parcela_numero,
                 parcela_total: totalParcelas,
                 grupo_id: currentGrupoId
-            };
-            
-            try {
-                const response = await fetch(`${API_URL}/contas`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Session-Token': sessionToken,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(novaParcelaData),
-                    mode: 'cors'
-                });
-
-                if (tratarErroAutenticacao(response)) return;
-
-                if (response.ok) {
-                    const savedData = await response.json();
-                    contas.push(savedData);
-                    sucessos++;
-                } else {
-                    let errorMsg = 'Erro desconhecido';
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorData.message || `Erro ${response.status}`;
-                    } catch (e) {
-                        errorMsg = `Erro ${response.status}: ${response.statusText}`;
-                    }
-                    erros.push(`Nova parcela ${novaParcela.parcela_numero}: ${errorMsg}`);
-                }
-            } catch (error) {
-                console.error(`Erro na nova parcela ${novaParcela.parcela_numero}:`, error);
-                erros.push(`Nova parcela ${novaParcela.parcela_numero}: ${error.message}`);
             }
-        }
+        });
+    }
+    
+    // 2. Atualizar UI imediatamente
+    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
+    updateAllFilters();
+    updateDashboard();
+    filterContas();
+    closeFormModal();
+    
+    showMessage(`Atualizando ${atualizacoes.length} parcela(s)...`, 'success');
+    
+    // 3. Processar atualizações em background (lotes de 5)
+    processEditQueue(atualizacoes, backupOriginal, totalParcelas);
+}
+
+async function processEditQueue(atualizacoes, backupOriginal, totalParcelas) {
+    const BATCH_SIZE = 5;
+    let sucessos = 0;
+    let erros = [];
+    
+    // Processar em lotes
+    for (let i = 0; i < atualizacoes.length; i += BATCH_SIZE) {
+        const batch = atualizacoes.slice(i, i + BATCH_SIZE);
         
-        // Atualizar parcela_total em todas as parcelas do grupo
-        try {
-            for (const parcela of parcelasDoGrupo) {
-                if (parcela.isNew) continue;
+        const results = await Promise.allSettled(
+            batch.map(async (item) => {
+                if (item.isNew) {
+                    // Criar nova parcela
+                    const response = await fetch(`${API_URL}/contas`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Session-Token': sessionToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(item.data),
+                        mode: 'cors'
+                    });
+                    
+                    if (!response.ok) throw new Error(`Erro ${response.status}`);
+                    
+                    const savedData = await response.json();
+                    
+                    // Atualizar conta temporária
+                    const index = contas.findIndex(c => c.tempId === item.tempId);
+                    if (index !== -1) {
+                        contas[index] = savedData;
+                    }
+                    
+                    return { success: true, id: item.tempId };
+                } else {
+                    // Atualizar parcela existente
+                    const response = await fetch(`${API_URL}/contas/${item.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Session-Token': sessionToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(item.data),
+                        mode: 'cors'
+                    });
+                    
+                    if (!response.ok) throw new Error(`Erro ${response.status}`);
+                    
+                    const savedData = await response.json();
+                    
+                    // Atualizar com dados do servidor
+                    const index = contas.findIndex(c => String(c.id) === String(item.id));
+                    if (index !== -1) {
+                        contas[index] = savedData;
+                    }
+                    
+                    return { success: true, id: item.id };
+                }
+            })
+        );
+        
+        // Contabilizar resultados
+        results.forEach((result, idx) => {
+            if (result.status === 'fulfilled') {
+                sucessos++;
+            } else {
+                const item = batch[idx];
+                erros.push(`Parcela ${item.data.parcela_numero}: ${result.reason.message}`);
                 
-                await fetch(`${API_URL}/contas/${parcela.id}`, {
+                // Reverter alteração em caso de erro
+                if (!item.isNew) {
+                    const backup = backupOriginal.find(b => contas[b.index]?.id === item.id);
+                    if (backup) {
+                        contas[backup.index] = backup.data;
+                    }
+                } else {
+                    contas = contas.filter(c => c.tempId !== item.tempId);
+                }
+            }
+        });
+    }
+    
+    // Atualizar parcela_total em todas as parcelas do grupo (não bloqueia)
+    if (sucessos > 0 && totalParcelas) {
+        Promise.allSettled(
+            atualizacoes.filter(a => !a.isNew).map(item =>
+                fetch(`${API_URL}/contas/${item.id}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1328,26 +1406,22 @@ async function handleEditSubmit(event) {
                     },
                     body: JSON.stringify({ parcela_total: totalParcelas }),
                     mode: 'cors'
-                });
-            }
-        } catch (error) {
-            console.error('Erro ao atualizar parcela_total:', error);
-        }
-        
-        if (erros.length === 0) {
-            showMessage(`${sucessos} parcela(s) atualizadas com sucesso!`, 'success');
-        } else {
-            showMessage(`${sucessos} de ${parcelasDoGrupo.length} parcelas atualizadas. Erros: ${erros.join('; ')}`, 'error');
-        }
-        
-        lastDataHash = JSON.stringify(contas.map(c => c.id));
-        updateAllFilters();
-        updateDashboard();
-        filterContas();
-        closeFormModal();
-    } catch (error) {
-        console.error('Erro geral:', error);
-        showMessage(`Erro: ${error.message}`, 'error');
+                })
+            )
+        );
+    }
+    
+    // Atualizar UI final
+    lastDataHash = JSON.stringify(contas.map(c => c.id));
+    updateAllFilters();
+    updateDashboard();
+    filterContas();
+    
+    // Mostrar resultado final
+    if (erros.length === 0) {
+        showMessage(`✅ ${sucessos} parcela(s) atualizadas com sucesso!`, 'success');
+    } else {
+        showMessage(`⚠️ ${sucessos} de ${atualizacoes.length} parcelas atualizadas. Erros: ${erros.join('; ')}`, 'warning');
     }
 }
 
@@ -1578,6 +1652,138 @@ async function salvarConta(editId) {
     } catch (error) {
         console.error('Erro completo:', error);
         showMessage(`Erro: ${error.message}`, 'error');
+    }
+}
+
+// ============================================
+// EDIÇÃO OTIMISTA PARA CONTA SIMPLES
+// ============================================
+async function editarContaOtimista(editId) {
+    // Validação dos campos obrigatórios
+    const descricao = document.getElementById('descricao')?.value?.trim();
+    const valor = document.getElementById('valor')?.value;
+    const dataVencimento = document.getElementById('data_vencimento')?.value;
+    const formaPagamento = document.getElementById('forma_pagamento')?.value;
+    const banco = document.getElementById('banco')?.value;
+
+    if (!descricao || !valor || !dataVencimento || !formaPagamento || !banco) {
+        showMessage('Por favor, preencha todos os campos obrigatórios.', 'error');
+        return;
+    }
+
+    const formData = {
+        documento: document.getElementById('documento')?.value?.trim() || null,
+        descricao: descricao,
+        valor: parseFloat(valor),
+        data_vencimento: dataVencimento,
+        forma_pagamento: formaPagamento,
+        banco: banco,
+        data_pagamento: document.getElementById('data_pagamento')?.value || null,
+        observacoes: document.getElementById('observacoes')?.value?.trim() || null,
+    };
+
+    // Validar valor numérico
+    if (isNaN(formData.valor) || formData.valor <= 0) {
+        showMessage('Valor inválido. Digite um número maior que zero.', 'error');
+        return;
+    }
+
+    // Manter parcela_numero e parcela_total
+    const contaOriginal = contas.find(c => String(c.id) === String(editId));
+    if (!contaOriginal) {
+        showMessage('Conta não encontrada!', 'error');
+        return;
+    }
+
+    formData.parcela_numero = contaOriginal.parcela_numero;
+    formData.parcela_total = contaOriginal.parcela_total;
+
+    if (!formData.data_pagamento) {
+        formData.status = contaOriginal.status;
+    } else {
+        formData.status = 'PAGO';
+    }
+
+    if (!isOnline) {
+        showMessage('Sistema offline. Dados não foram salvos.', 'error');
+        closeFormModal();
+        return;
+    }
+
+    // ====== EDIÇÃO OTIMISTA ======
+    
+    // 1. Fazer backup da conta original
+    const backup = {...contaOriginal};
+    const index = contas.findIndex(c => String(c.id) === String(editId));
+    
+    // 2. Atualizar localmente IMEDIATAMENTE
+    contas[index] = {
+        ...contaOriginal,
+        ...formData,
+        synced: false
+    };
+    
+    // 3. Atualizar UI imediatamente
+    lastDataHash = JSON.stringify(contas.map(c => c.id));
+    updateAllFilters();
+    updateDashboard();
+    filterContas();
+    closeFormModal();
+    
+    showMessage('Conta atualizada! Sincronizando...', 'success');
+    
+    // 4. Sincronizar em background
+    try {
+        const response = await fetch(`${API_URL}/contas/${editId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Session-Token': sessionToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(formData),
+            mode: 'cors'
+        });
+
+        if (tratarErroAutenticacao(response)) {
+            // Reverter em caso de erro de autenticação
+            contas[index] = backup;
+            updateDashboard();
+            filterContas();
+            return;
+        }
+
+        if (!response.ok) {
+            let errorMessage = 'Erro ao salvar';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorData.message || errorMessage;
+            } catch (e) {
+                errorMessage = `Erro ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
+        }
+
+        const savedData = await response.json();
+        
+        // Atualizar com dados reais do servidor
+        contas[index] = savedData;
+        
+        lastDataHash = JSON.stringify(contas.map(c => c.id));
+        updateAllFilters();
+        updateDashboard();
+        filterContas();
+        
+        showMessage('✅ Conta sincronizada com sucesso!', 'success');
+    } catch (error) {
+        console.error('Erro ao sincronizar:', error);
+        
+        // Reverter alteração em caso de erro
+        contas[index] = backup;
+        updateDashboard();
+        filterContas();
+        
+        showMessage(`❌ Erro ao sincronizar: ${error.message}`, 'error');
     }
 }
 
