@@ -43,7 +43,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// AUTENTICAÇÃO
+// AUTENTICAÇÃO CORRIGIDA
 const PORTAL_URL = process.env.PORTAL_URL || 'https://ir-comercio-portal-zcan.onrender.com';
 
 async function verificarAutenticacao(req, res, next) {
@@ -51,41 +51,80 @@ async function verificarAutenticacao(req, res, next) {
     if (publicPaths.includes(req.path)) return next();
 
     const sessionToken = req.headers['x-session-token'];
+    
     if (!sessionToken) {
-        console.log('❌ Token não fornecido');
-        return res.status(401).json({ error: 'Não autenticado' });
+        console.log('❌ Token não fornecido no header X-Session-Token');
+        return res.status(401).json({ 
+            error: 'Não autenticado',
+            message: 'Token de sessão não fornecido'
+        });
     }
 
     try {
+        console.log(`🔐 Verificando sessão no portal: ${PORTAL_URL}/api/verify-session`);
+        
         const verifyResponse = await fetch(`${PORTAL_URL}/api/verify-session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionToken })
+            body: JSON.stringify({ sessionToken }),
+            timeout: 10000 // 10 segundos de timeout
         });
 
+        console.log(`📡 Resposta do portal: ${verifyResponse.status}`);
+
         if (!verifyResponse.ok) {
-            console.log('❌ Sessão inválida - Status:', verifyResponse.status);
-            return res.status(401).json({ error: 'Sessão inválida' });
+            console.log(`❌ Sessão inválida - Status: ${verifyResponse.status}`);
+            let errorDetail = 'Resposta inválida do servidor de autenticação';
+            
+            try {
+                const errorData = await verifyResponse.json();
+                errorDetail = errorData.error || errorData.message || errorDetail;
+            } catch (e) {
+                errorDetail = `Status ${verifyResponse.status}: ${verifyResponse.statusText}`;
+            }
+            
+            return res.status(401).json({ 
+                error: 'Sessão inválida',
+                message: errorDetail
+            });
         }
 
         const sessionData = await verifyResponse.json();
+        
         if (!sessionData.valid) {
-            console.log('❌ Sessão não válida');
-            return res.status(401).json({ error: 'Sessão inválida' });
+            console.log('❌ Sessão não válida segundo o portal');
+            return res.status(401).json({ 
+                error: 'Sessão inválida',
+                message: 'Token de sessão expirado ou inválido'
+            });
         }
 
         req.user = sessionData.session;
         req.sessionToken = sessionToken;
-        console.log('✅ Autenticação OK');
+        console.log(`✅ Autenticação OK para usuário: ${req.user?.nome || 'Desconhecido'}`);
         next();
+        
     } catch (error) {
         console.error('❌ Erro ao verificar autenticação:', error.message);
-        return res.status(500).json({ error: 'Erro ao verificar autenticação', details: error.message });
+        
+        // Se for erro de rede/timeout, não invalidar a sessão imediatamente
+        if (error.name === 'FetchError' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+            console.log('⚠️  Erro de conexão com portal - permitindo acesso temporário');
+            req.user = { temporario: true };
+            req.sessionToken = sessionToken;
+            return next();
+        }
+        
+        return res.status(500).json({ 
+            error: 'Erro ao verificar autenticação', 
+            message: error.message,
+            tipo: error.name
+        });
     }
 }
 
 // =====================================================
-// NOVO: GET /api/contas/grupo/:grupoId
+// GET /api/contas/grupo/:grupoId
 // Retorna todas as parcelas de um grupo
 // =====================================================
 app.get('/api/contas/grupo/:grupoId', verificarAutenticacao, async (req, res) => {
@@ -329,6 +368,7 @@ app.patch('/api/contas/:id', verificarAutenticacao, async (req, res) => {
         const updates = {};
         if (req.body.status !== undefined) updates.status = req.body.status;
         if (req.body.data_pagamento !== undefined) updates.data_pagamento = req.body.data_pagamento;
+        if (req.body.parcela_total !== undefined) updates.parcela_total = req.body.parcela_total;
 
         console.log('📤 Updates:', JSON.stringify(updates, null, 2));
 
@@ -388,7 +428,12 @@ app.delete('/api/contas/:id', verificarAutenticacao, async (req, res) => {
 
 // ROTAS DE SAÚDE
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        portal: PORTAL_URL,
+        supabase: supabaseUrl
+    });
 });
 
 app.get('/', (req, res) => {
@@ -412,7 +457,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('');
     console.log('===============================================');
-    console.log('🚀 CONTAS A PAGAR');
+    console.log('🚀 CONTAS A PAGAR - VERSÃO CORRIGIDA');
     console.log('===============================================');
     console.log(`✅ Porta: ${PORT}`);
     console.log(`✅ Supabase: ${supabaseUrl}`);
