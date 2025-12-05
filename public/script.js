@@ -14,6 +14,8 @@ let formType = 'simple'; // 'simple' ou 'parcelado'
 let numParcelas = 0;
 let currentGrupoId = null; // ID do grupo sendo editado
 let parcelasDoGrupo = []; // Parcelas do grupo sendo editado
+let tentativasReconexao = 0;
+const MAX_TENTATIVAS = 3;
 
 const meses = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -57,7 +59,7 @@ window.nextMonth = function() {
 };
 
 // ============================================
-// AUTENTICAÇÃO
+// AUTENTICAÇÃO CORRIGIDA
 // ============================================
 function verificarAutenticacao() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -66,17 +68,45 @@ function verificarAutenticacao() {
     if (tokenFromUrl) {
         sessionToken = tokenFromUrl;
         sessionStorage.setItem('contasPagarSession', tokenFromUrl);
+        sessionStorage.setItem('contasPagarSessionTime', Date.now().toString());
         window.history.replaceState({}, document.title, window.location.pathname);
+        console.log('✅ Token recebido da URL');
     } else {
         sessionToken = sessionStorage.getItem('contasPagarSession');
+        
+        // Verificar se a sessão não expirou (24 horas)
+        const sessionTime = sessionStorage.getItem('contasPagarSessionTime');
+        if (sessionTime && sessionToken) {
+            const timeDiff = Date.now() - parseInt(sessionTime);
+            const hoursElapsed = timeDiff / (1000 * 60 * 60);
+            
+            if (hoursElapsed > 24) {
+                console.log('⏰ Sessão expirada por tempo (>24h)');
+                limparSessaoERedirecionarParaPortal();
+                return;
+            }
+            console.log(`✅ Sessão válida (${hoursElapsed.toFixed(1)}h desde o login)`);
+        }
     }
 
     if (!sessionToken) {
+        console.log('❌ Nenhum token encontrado');
         mostrarTelaAcessoNegado();
         return;
     }
 
     inicializarApp();
+}
+
+function limparSessaoERedirecionarParaPortal() {
+    sessionStorage.removeItem('contasPagarSession');
+    sessionStorage.removeItem('contasPagarSessionTime');
+    tentativasReconexao = 0;
+    console.log('🔄 Redirecionando para o portal...');
+    setTimeout(() => {
+        window.location.href = PORTAL_URL;
+    }, 2000);
+    mostrarTelaAcessoNegado('Sua sessão expirou. Redirecionando...');
 }
 
 function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
@@ -89,7 +119,29 @@ function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
     `;
 }
 
+function tratarErroAutenticacao(response) {
+    if (response && response.status === 401) {
+        console.log('❌ Token inválido ou sessão expirada (401)');
+        tentativasReconexao++;
+        
+        if (tentativasReconexao < MAX_TENTATIVAS) {
+            console.log(`🔄 Tentativa ${tentativasReconexao} de ${MAX_TENTATIVAS} - aguardando 2s...`);
+            setTimeout(() => {
+                checkServerStatus();
+            }, 2000);
+            return true;
+        } else {
+            console.log('❌ Máximo de tentativas atingido');
+            limparSessaoERedirecionarParaPortal();
+            return true;
+        }
+    }
+    return false;
+}
+
 function inicializarApp() {
+    console.log('🚀 Iniciando aplicação...');
+    tentativasReconexao = 0; // Reset tentativas ao iniciar
     updateMonthDisplay();
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
@@ -110,23 +162,21 @@ async function checkServerStatus() {
             mode: 'cors'
         });
 
-        if (response.status === 401) {
-            sessionStorage.removeItem('contasPagarSession');
-            mostrarTelaAcessoNegado('Sua sessão expirou');
-            return false;
-        }
+        if (tratarErroAutenticacao(response)) return false;
 
         const wasOffline = !isOnline;
         isOnline = response.ok;
         
         if (wasOffline && isOnline) {
             console.log('✅ SERVIDOR ONLINE');
+            tentativasReconexao = 0; // Reset ao conectar
             await loadContas();
         }
         
         updateConnectionStatus();
         return isOnline;
     } catch (error) {
+        console.error('❌ Erro ao verificar servidor:', error.message);
         isOnline = false;
         updateConnectionStatus();
         return false;
@@ -156,11 +206,7 @@ async function loadContas() {
             mode: 'cors'
         });
 
-        if (response.status === 401) {
-            sessionStorage.removeItem('contasPagarSession');
-            mostrarTelaAcessoNegado('Sua sessão expirou');
-            return;
-        }
+        if (tratarErroAutenticacao(response)) return;
 
         if (!response.ok) return;
 
@@ -194,6 +240,8 @@ async function loadParcelasDoGrupo(grupoId) {
             },
             mode: 'cors'
         });
+
+        if (tratarErroAutenticacao(response)) return [];
 
         if (!response.ok) return [];
 
@@ -1008,11 +1056,7 @@ async function handleEditSubmit(event) {
                     mode: 'cors'
                 });
 
-                if (response.status === 401) {
-                    sessionStorage.removeItem('contasPagarSession');
-                    mostrarTelaAcessoNegado('Sua sessão expirou');
-                    return;
-                }
+                if (tratarErroAutenticacao(response)) return;
 
                 if (response.ok) {
                     const savedData = await response.json();
@@ -1073,11 +1117,7 @@ async function handleEditSubmit(event) {
                     mode: 'cors'
                 });
 
-                if (response.status === 401) {
-                    sessionStorage.removeItem('contasPagarSession');
-                    mostrarTelaAcessoNegado('Sua sessão expirou');
-                    return;
-                }
+                if (tratarErroAutenticacao(response)) return;
 
                 if (response.ok) {
                     const savedData = await response.json();
@@ -1227,11 +1267,7 @@ async function handleSubmitParcelado(event) {
                     mode: 'cors'
                 });
 
-                if (response.status === 401) {
-                    sessionStorage.removeItem('contasPagarSession');
-                    mostrarTelaAcessoNegado('Sua sessão expirou');
-                    return;
-                }
+                if (tratarErroAutenticacao(response)) return;
 
                 if (response.ok) {
                     const savedData = await response.json();
@@ -1348,11 +1384,7 @@ async function salvarConta(editId) {
             mode: 'cors'
         });
 
-        if (response.status === 401) {
-            sessionStorage.removeItem('contasPagarSession');
-            mostrarTelaAcessoNegado('Sua sessão expirou');
-            return;
-        }
+        if (tratarErroAutenticacao(response)) return;
 
         if (!response.ok) {
             let errorMessage = 'Erro ao salvar';
@@ -1419,11 +1451,7 @@ window.togglePago = async function(id) {
                 mode: 'cors'
             });
 
-            if (response.status === 401) {
-                sessionStorage.removeItem('contasPagarSession');
-                mostrarTelaAcessoNegado('Sua sessão expirou');
-                return;
-            }
+            if (tratarErroAutenticacao(response)) return;
 
             if (!response.ok) throw new Error('Erro ao atualizar');
 
@@ -1469,11 +1497,7 @@ window.deleteConta = async function(id) {
                 mode: 'cors'
             });
 
-            if (response.status === 401) {
-                sessionStorage.removeItem('contasPagarSession');
-                mostrarTelaAcessoNegado('Sua sessão expirou');
-                return;
-            }
+            if (tratarErroAutenticacao(response)) return;
 
             if (!response.ok) throw new Error('Erro ao deletar');
         } catch (error) {
