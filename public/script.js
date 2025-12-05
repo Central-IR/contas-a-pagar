@@ -22,6 +22,100 @@ const meses = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
+// ============================================
+// QUEUE DE PROCESSAMENTO EM BACKGROUND
+// ============================================
+const processingQueue = {
+    items: [],
+    isProcessing: false,
+    retryAttempts: 3
+};
+
+function addToQueue(item) {
+    processingQueue.items.push({
+        ...item,
+        id: generateUUID(),
+        attempts: 0,
+        status: 'pending'
+    });
+}
+
+async function processQueue() {
+    if (processingQueue.isProcessing || processingQueue.items.length === 0) return;
+    
+    processingQueue.isProcessing = true;
+    
+    // Processar em lotes de 5 requisições paralelas
+    const BATCH_SIZE = 5;
+    
+    while (processingQueue.items.length > 0) {
+        const batch = processingQueue.items.slice(0, BATCH_SIZE);
+        
+        await Promise.allSettled(
+            batch.map(item => processSingleItem(item))
+        );
+        
+        // Remover itens processados com sucesso
+        processingQueue.items = processingQueue.items.filter(
+            item => item.status !== 'success'
+        );
+    }
+    
+    processingQueue.isProcessing = false;
+}
+
+async function processSingleItem(item) {
+    try {
+        const response = await fetch(`${API_URL}/contas`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Session-Token': sessionToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(item.data),
+            mode: 'cors'
+        });
+
+        if (tratarErroAutenticacao(response)) {
+            item.status = 'auth_error';
+            return;
+        }
+
+        if (response.ok) {
+            const savedData = await response.json();
+            
+            // Atualizar conta temporária com dados reais do servidor
+            const index = contas.findIndex(c => c.tempId === item.tempId);
+            if (index !== -1) {
+                contas[index] = savedData;
+            }
+            
+            item.status = 'success';
+            console.log(`✅ Parcela ${item.tempId} salva com sucesso`);
+        } else {
+            throw new Error(`Erro ${response.status}`);
+        }
+    } catch (error) {
+        console.error(`❌ Erro ao processar item ${item.tempId}:`, error);
+        item.attempts++;
+        
+        if (item.attempts >= processingQueue.retryAttempts) {
+            item.status = 'failed';
+            showMessage(`Falha ao salvar parcela. Tente novamente.`, 'error');
+            
+            // Remover conta temporária que falhou
+            contas = contas.filter(c => c.tempId !== item.tempId);
+            updateDashboard();
+            filterContas();
+        } else {
+            item.status = 'retry';
+            // Aguardar antes de tentar novamente
+            await new Promise(resolve => setTimeout(resolve, 1000 * item.attempts));
+        }
+    }
+}
+
 console.log('🚀 Contas a Pagar iniciada');
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -168,9 +262,15 @@ async function checkServerStatus() {
         isOnline = response.ok;
         
         if (wasOffline && isOnline) {
-            console.log('✅ SERVIDOR ONLINE');
+            console.log('✅ SERVIDOR ONLINE - Sincronizando pendências...');
             tentativasReconexao = 0; // Reset ao conectar
             await loadContas();
+            
+            // Processar itens pendentes na fila
+            if (processingQueue.items.length > 0) {
+                showMessage('Sincronizando contas pendentes...', 'info');
+                processQueue();
+            }
         }
         
         updateConnectionStatus();
@@ -973,12 +1073,87 @@ function closeFormModal() {
 }
 
 // ============================================
-// SUBMIT
+// SUBMIT SIMPLES OTIMIZADO
 // ============================================
 async function handleSubmit(event) {
     event.preventDefault();
     const editId = document.getElementById('editId').value;
-    await salvarConta(editId);
+    
+    if (editId) {
+        // Edição usa o fluxo normal
+        await salvarConta(editId);
+    } else {
+        // Novo cadastro usa cadastro otimista
+        await salvarContaOtimista();
+    }
+}
+
+async function salvarContaOtimista() {
+    // Validação dos campos obrigatórios
+    const descricao = document.getElementById('descricao')?.value?.trim();
+    const valor = document.getElementById('valor')?.value;
+    const dataVencimento = document.getElementById('data_vencimento')?.value;
+    const formaPagamento = document.getElementById('forma_pagamento')?.value;
+    const banco = document.getElementById('banco')?.value;
+
+    if (!descricao || !valor || !dataVencimento || !formaPagamento || !banco) {
+        showMessage('Por favor, preencha todos os campos obrigatórios.', 'error');
+        return;
+    }
+
+    const formData = {
+        documento: document.getElementById('documento')?.value?.trim() || null,
+        descricao: descricao,
+        valor: parseFloat(valor),
+        data_vencimento: dataVencimento,
+        forma_pagamento: formaPagamento,
+        banco: banco,
+        data_pagamento: document.getElementById('data_pagamento')?.value || null,
+        observacoes: document.getElementById('observacoes')?.value?.trim() || null,
+        status: document.getElementById('data_pagamento')?.value ? 'PAGO' : 'PENDENTE'
+    };
+
+    // Validar valor numérico
+    if (isNaN(formData.valor) || formData.valor <= 0) {
+        showMessage('Valor inválido. Digite um número maior que zero.', 'error');
+        return;
+    }
+
+    // ====== CADASTRO OTIMISTA ======
+    
+    // 1. Criar conta temporária
+    const tempId = `temp_${Date.now()}`;
+    const contaTemporaria = {
+        ...formData,
+        id: null,
+        tempId: tempId,
+        synced: false
+    };
+    
+    // 2. Adicionar localmente
+    contas.push(contaTemporaria);
+    
+    // 3. Atualizar UI imediatamente
+    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
+    updateAllFilters();
+    updateDashboard();
+    filterContas();
+    closeFormModal();
+    
+    showMessage('Conta cadastrada! Sincronizando...', 'success');
+    
+    // 4. Adicionar à fila de processamento
+    if (!isOnline) {
+        showMessage('Sistema offline. A conta será sincronizada quando voltar online.', 'warning');
+        return;
+    }
+    
+    addToQueue({
+        tempId: tempId,
+        data: formData
+    });
+    
+    processQueue();
 }
 
 // ============================================
@@ -1176,6 +1351,9 @@ async function handleEditSubmit(event) {
     }
 }
 
+// ============================================
+// SUBMIT PARCELADO OTIMIZADO
+// ============================================
 async function handleSubmitParcelado(event) {
     event.preventDefault();
     
@@ -1241,76 +1419,60 @@ async function handleSubmitParcelado(event) {
         return;
     }
     
+    // ====== OTIMIZAÇÃO: CADASTRO INSTANTÂNEO ======
+    
+    // 1. Criar contas temporárias localmente (INSTANTÂNEO)
+    const contasTemporarias = parcelas.map((parcela, index) => ({
+        ...parcela,
+        id: null,
+        tempId: `temp_${grupoId}_${index}`,
+        synced: false
+    }));
+    
+    // 2. Adicionar à lista local imediatamente
+    contas.push(...contasTemporarias);
+    
+    // 3. Atualizar interface (INSTANTÂNEO)
+    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
+    updateAllFilters();
+    updateDashboard();
+    filterContas();
+    
+    // 4. Fechar modal imediatamente
+    closeFormModal();
+    
+    // 5. Mostrar feedback de sucesso instantâneo
+    showMessage(`${parcelas.length} parcelas cadastradas! Sincronizando...`, 'success');
+    
+    // 6. Adicionar à fila de processamento em background
+    parcelas.forEach((parcela, index) => {
+        addToQueue({
+            tempId: `temp_${grupoId}_${index}`,
+            data: parcela
+        });
+    });
+    
+    // 7. Processar fila em background (NÃO BLOQUEIA A UI)
     if (!isOnline) {
-        showMessage('Sistema offline. Dados não foram salvos.', 'error');
-        closeFormModal();
+        showMessage('Sistema offline. As parcelas serão sincronizadas quando voltar online.', 'warning');
         return;
     }
     
-    // Salvar todas as parcelas
-    try {
-        let sucessos = 0;
-        let erros = [];
+    processQueue().then(() => {
+        // Atualizar interface após sincronização completa
+        lastDataHash = JSON.stringify(contas.map(c => c.id));
+        updateAllFilters();
+        updateDashboard();
+        filterContas();
         
-        for (const [index, parcela] of parcelas.entries()) {
-            try {
-                console.log(`Enviando parcela ${index + 1}:`, parcela); // Debug
-
-                const response = await fetch(`${API_URL}/contas`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Session-Token': sessionToken,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(parcela),
-                    mode: 'cors'
-                });
-
-                if (tratarErroAutenticacao(response)) return;
-
-                if (response.ok) {
-                    const savedData = await response.json();
-                    contas.push(savedData);
-                    sucessos++;
-                } else {
-                    let errorMsg = 'Erro desconhecido';
-                    try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.error || errorData.message || `Erro ${response.status}`;
-                    } catch (e) {
-                        errorMsg = `Erro ${response.status}: ${response.statusText}`;
-                    }
-                    erros.push(`Parcela ${index + 1}: ${errorMsg}`);
-                }
-            } catch (error) {
-                console.error(`Erro na parcela ${index + 1}:`, error);
-                erros.push(`Parcela ${index + 1}: ${error.message}`);
-            }
-        }
-        
+        const sucessos = contas.filter(c => c.grupo_id === grupoId && c.id !== null).length;
         if (sucessos === parcelas.length) {
-            showMessage(`${sucessos} parcelas criadas com sucesso!`, 'success');
-            lastDataHash = JSON.stringify(contas.map(c => c.id));
-            updateAllFilters();
-            updateDashboard();
-            filterContas();
-            closeFormModal();
-        } else if (sucessos > 0) {
-            showMessage(`${sucessos} de ${parcelas.length} parcelas criadas. Erros: ${erros.join('; ')}`, 'error');
-            lastDataHash = JSON.stringify(contas.map(c => c.id));
-            updateAllFilters();
-            updateDashboard();
-            filterContas();
-        } else {
-            showMessage(`Falha ao criar parcelas. Erros: ${erros.join('; ')}`, 'error');
+            showMessage(`✅ Todas as ${parcelas.length} parcelas foram sincronizadas!`, 'success');
         }
-    } catch (error) {
-        console.error('Erro geral:', error);
-        showMessage(`Erro: ${error.message}`, 'error');
-    }
+    });
 }
 
+// Manter a função salvarConta original para edições
 async function salvarConta(editId) {
     // Validação dos campos obrigatórios
     const descricao = document.getElementById('descricao')?.value?.trim();
@@ -1371,7 +1533,7 @@ async function salvarConta(editId) {
         const url = editId ? `${API_URL}/contas/${editId}` : `${API_URL}/contas`;
         const method = editId ? 'PUT' : 'POST';
 
-        console.log('Enviando dados:', formData); // Debug
+        console.log('Enviando dados:', formData);
 
         const response = await fetch(url, {
             method,
@@ -1722,7 +1884,7 @@ function filterContas() {
 }
 
 // ============================================
-// RENDERIZAÇÃO
+// RENDERIZAÇÃO COM INDICADOR DE SINCRONIZAÇÃO
 // ============================================
 function renderContas(lista) {
     const container = document.getElementById('contasContainer');
@@ -1754,16 +1916,23 @@ function renderContas(lista) {
                     const numParcelas = c.parcela_numero && c.parcela_total 
                         ? `${c.parcela_numero}/${c.parcela_total}` 
                         : '-';
+                    
+                    // Indicador de sincronização
+                    const syncIndicator = !c.synced && c.tempId 
+                        ? '<span style="color: orange; font-size: 0.8em;" title="Sincronizando...">⟳</span> '
+                        : '';
+                    
                     return `
                     <tr class="${c.status === 'PAGO' ? 'row-pago' : ''}">
                         <td style="text-align: center;">
                             <button class="check-btn ${c.status === 'PAGO' ? 'checked' : ''}" 
-                                    onclick="togglePago('${c.id}')" 
-                                    title="${c.status === 'PAGO' ? 'Marcar como pendente' : 'Marcar como pago'}">
+                                    onclick="togglePago('${c.id || c.tempId}')" 
+                                    title="${c.status === 'PAGO' ? 'Marcar como pendente' : 'Marcar como pago'}"
+                                    ${!c.id ? 'disabled' : ''}>
                                     ✓
                             </button>
                         </td>
-                        <td>${c.descricao}</td>
+                        <td>${syncIndicator}${c.descricao}</td>
                         <td><strong>R$ ${parseFloat(c.valor).toFixed(2)}</strong></td>
                         <td>${formatDate(c.data_vencimento)}</td>
                         <td style="text-align: center;">${numParcelas}</td>
@@ -1771,9 +1940,9 @@ function renderContas(lista) {
                         <td>${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
                         <td>${getStatusBadge(getStatusDinamico(c))}</td>
                         <td class="actions-cell" style="text-align: center;">
-                            <button onclick="viewConta('${c.id}')" class="action-btn view">Ver</button>
-                            <button onclick="editConta('${c.id}')" class="action-btn edit">Editar</button>
-                            <button onclick="deleteConta('${c.id}')" class="action-btn delete">Excluir</button>
+                            <button onclick="viewConta('${c.id || c.tempId}')" class="action-btn view" ${!c.id ? 'disabled' : ''}>Ver</button>
+                            <button onclick="editConta('${c.id || c.tempId}')" class="action-btn edit" ${!c.id ? 'disabled' : ''}>Editar</button>
+                            <button onclick="deleteConta('${c.id || c.tempId}')" class="action-btn delete" ${!c.id ? 'disabled' : ''}>Excluir</button>
                         </td>
                     </tr>
                 `}).join('')}
