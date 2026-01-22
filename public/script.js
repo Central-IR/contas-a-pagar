@@ -8,8 +8,8 @@ let contas = [];
 let isOnline = false;
 let lastDataHash = '';
 let sessionToken = null;
-let currentMonth = new Date().getMonth();
-let currentYear = new Date().getFullYear();
+let currentMonth = new Date();
+
 let formType = 'simple'; // 'simple' ou 'parcelado'
 let numParcelas = 0;
 let currentGrupoId = null; // ID do grupo sendo editado
@@ -125,31 +125,27 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================
 // NAVEGAÇÃO POR MESES
 // ============================================
-function updateMonthDisplay() {
-    const display = document.getElementById('currentMonthDisplay');
+function updateDisplay() {
+    const display = document.getElementById('currentMonth');
     if (display) {
-        display.textContent = `${meses[currentMonth]} ${currentYear}`;
+        display.textContent = `${meses[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`;
     }
     updateDashboard();
     filterContas();
 }
 
+window.changeMonth = function(direction) {
+    currentMonth.setMonth(currentMonth.getMonth() + direction);
+    updateDisplay();
+};
+
+// Funções antigas mantidas para compatibilidade
 window.previousMonth = function() {
-    currentMonth--;
-    if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-    }
-    updateMonthDisplay();
+    changeMonth(-1);
 };
 
 window.nextMonth = function() {
-    currentMonth++;
-    if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-    }
-    updateMonthDisplay();
+    changeMonth(1);
 };
 
 // ============================================
@@ -236,7 +232,7 @@ function tratarErroAutenticacao(response) {
 function inicializarApp() {
     console.log('🚀 Iniciando aplicação...');
     tentativasReconexao = 0; // Reset tentativas ao iniciar
-    updateMonthDisplay();
+    updateDisplay();
     checkServerStatus();
     setInterval(checkServerStatus, 15000);
     startPolling();
@@ -369,7 +365,7 @@ function updateDashboard() {
     
     const contasDoMes = contas.filter(c => {
         const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
-        return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
+        return dataVenc.getMonth() === currentMonth.getMonth() && dataVenc.getFullYear() === currentMonth.getFullYear();
     });
     
     const valorPago = contasDoMes
@@ -385,6 +381,8 @@ function updateDashboard() {
     const qtdVencido = contasVencidas.length;
     
     const valorTotal = contasDoMes.reduce((sum, c) => sum + parseFloat(c.valor || 0), 0);
+    
+    // CORREÇÃO: Pendente = Total - Pagos
     const valorPendente = valorTotal - valorPago;
     
     document.getElementById('statPagos').textContent = `R$ ${valorPago.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
@@ -393,16 +391,100 @@ function updateDashboard() {
     document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     
     const cardVencido = document.getElementById('cardVencido');
-    const badgeVencido = document.getElementById('pulseBadgeVencido');
     if (qtdVencido > 0) {
         cardVencido.classList.add('has-alert');
-        badgeVencido.style.display = 'flex';
-        badgeVencido.textContent = qtdVencido;
     } else {
         cardVencido.classList.remove('has-alert');
-        badgeVencido.style.display = 'none';
     }
 }
+
+// ============================================
+// MODAL DE VENCIDOS
+// ============================================
+window.showVencidoModal = function() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    const contasDoMes = contas.filter(c => {
+        const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
+        return dataVenc.getMonth() === currentMonth.getMonth() && dataVenc.getFullYear() === currentMonth.getFullYear();
+    });
+    
+    const contasVencidas = contasDoMes.filter(c => {
+        if (c.status === 'PAGO') return false;
+        const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
+        dataVenc.setHours(0, 0, 0, 0);
+        return dataVenc <= hoje;
+    });
+    
+    if (contasVencidas.length === 0) {
+        showMessage('Não há contas vencidas neste mês!', 'success');
+        return;
+    }
+    
+    const modal = document.getElementById('vencidoModal');
+    const body = document.getElementById('vencidoModalBody');
+    
+    const totalVencido = contasVencidas.reduce((sum, c) => sum + parseFloat(c.valor || 0), 0);
+    
+    body.innerHTML = `
+        <h3 style="color: #EF4444; margin-bottom: 20px; font-size: 20px; text-align: center;">
+            ⚠️ Contas Vencidas
+        </h3>
+        <p style="text-align: center; margin-bottom: 24px; color: var(--text-secondary);">
+            Total de <strong>${contasVencidas.length}</strong> conta(s) vencida(s) no valor de 
+            <strong style="color: #EF4444;">R$ ${totalVencido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+        </p>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border-color);">
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Descrição</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Vencimento</th>
+                        <th style="padding: 12px; text-align: right; font-weight: 600;">Valor</th>
+                        <th style="padding: 12px; text-align: center; font-weight: 600;">Dias</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${contasVencidas.map(c => {
+                        const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
+                        const diasAtraso = Math.floor((hoje - dataVenc) / (1000 * 60 * 60 * 24));
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 12px;">${c.descricao}</td>
+                                <td style="padding: 12px;">${formatDate(c.data_vencimento)}</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; color: #EF4444;">
+                                    R$ ${parseFloat(c.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                                </td>
+                                <td style="padding: 12px; text-align: center;">
+                                    <span style="background: #FEE2E2; color: #DC2626; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                        ${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
+};
+
+window.closeVencidoModal = function() {
+    const modal = document.getElementById('vencidoModal');
+    modal.style.display = 'none';
+};
+
+// ============================================
+// SINCRONIZAÇÃO
+// ============================================
+window.sincronizarDados = async function() {
+    showMessage('Sincronizando...', 'info');
+    await loadContas();
+    showMessage('Dados sincronizados!', 'success');
+};
 
 // ============================================
 // FORMULÁRIO
@@ -443,6 +525,7 @@ async function showFormModal(editingId) {
     const modalHTML = `
         <div class="modal-overlay" id="formModal">
             <div class="modal-content modal-large">
+                <button class="modal-close-x" onclick="closeFormModal()" title="Fechar">✕</button>
                 <div class="modal-header">
                     <h3 class="modal-title">${isEditing ? 'Editar Conta' : 'Nova Conta'}</h3>
                 </div>
@@ -1922,6 +2005,7 @@ window.viewConta = function(id) {
     const modal = `
         <div class="modal-overlay" id="viewModal">
             <div class="modal-content modal-view">
+                <button class="modal-close-x" onclick="closeViewModal()" title="Fechar">✕</button>
                 <div class="modal-header">
                     <h3 class="modal-title">Detalhes da Conta</h3>
                 </div>
