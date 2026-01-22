@@ -4,111 +4,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contas a Pagar</title>
+    <link rel="icon" type="image/png" href="I.R.-COMERCIO-E-MATERIAIS-ELETRICOS-PRETO.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <!-- Splash Screen -->
     <div class="splash-screen" id="splashScreen">
-        <h1 class="splash-title">Contas a Pagar</h1>
+        <div class="loader"></div>
     </div>
 
-    <!-- Conteúdo Principal -->
-    <div class="app-content">
+    <!-- INTERFACE PRINCIPAL -->
+    <div class="app-content" id="mainView">
         <div class="container">
+            <!-- Header -->
             <div class="header">
-                <h1>Contas a Pagar</h1>
-                <div id="connectionStatus" class="connection-status offline">
-                    <span class="status-dot"></span>
+                <div class="header-left">
+                    <h1>Contas a Pagar</h1>
+                    <div id="connectionStatus" class="connection-status offline">
+                        <span class="status-dot"></span>
+                    </div>
                 </div>
+                <button onclick="toggleForm()" class="btn-new-order-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Nova Conta
+                </button>
             </div>
 
-            <!-- NAVEGAÇÃO POR MESES -->
-            <div class="card">
-                <div class="month-navigation">
-                    <button onclick="previousMonth()" class="month-nav-btn">Anterior</button>
-                    <h3 id="currentMonthDisplay" class="month-display">Carregando...</h3>
-                    <button onclick="nextMonth()" class="month-nav-btn">Próximo</button>
-                </div>
-            </div>
-
-            <!-- DASHBOARD -->
+            <!-- Dashboard Cards -->
             <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-label">Pagos</div>
-                    <div class="stat-value stat-success" id="statPagos">R$ 0,00</div>
-                </div>
-                <div class="stat-card stat-card-alert" id="cardVencido">
-                    <div class="stat-label">Vencido</div>
-                    <div class="stat-value stat-danger" id="statVencido">0</div>
-                    <div class="pulse-badge" id="pulseBadgeVencido" style="display: none;">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Pendente</div>
-                    <div class="stat-value stat-pending" id="statPendente">R$ 0,00</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Valor Total</div>
-                    <div class="stat-value stat-total" id="statValorTotal">R$ 0,00</div>
-                </div>
-            </div>
-
-            <!-- FILTROS -->
-            <div class="card">
-                <div class="filter-section">
-                    <div class="form-group">
-                        <label for="search">Pesquisar:</label>
-                        <input type="text" id="search" placeholder="Descrição, banco..." oninput="filterContas()">
+                <div class="stat-card stat-card-success">
+                    <div class="stat-icon stat-icon-success">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
                     </div>
-                    <div class="form-group">
-                        <label for="filterBanco">Filtrar por Banco:</label>
-                        <select id="filterBanco" onchange="filterContas()">
-                            <option value="">Todos</option>
-                        </select>
+                    <div class="stat-content">
+                        <div class="stat-value stat-value-success" id="statPagos">R$ 0,00</div>
+                        <div class="stat-label">Pagos</div>
                     </div>
-                    <div class="form-group">
-                        <label for="filterPagamento">Filtrar por Pagamento:</label>
-                        <select id="filterPagamento" onchange="filterContas()">
-                            <option value="">Todos</option>
-                            <option value="BOLETO">Boleto</option>
-                            <option value="CARTAO">Cartão</option>
-                            <option value="DINHEIRO">Dinheiro</option>
-                            <option value="TRANSFERENCIA">Transferência</option>
-                        </select>
+                </div>
+                <div class="stat-card stat-card-danger" id="cardVencido" onclick="showVencidoModal()" style="cursor: pointer;" title="Clique para ver detalhes">
+                    <div class="stat-icon stat-icon-danger">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
                     </div>
-                    <div class="form-group">
-                        <label for="filterStatus">Filtrar por Status:</label>
-                        <select id="filterStatus" onchange="filterContas()">
-                            <option value="">Todos</option>
-                            <option value="PAGO">Pago</option>
-                            <option value="VENCIDO">Vencido</option>
-                            <option value="PENDENTE">Pendente</option>
-                        </select>
+                    <div class="stat-content">
+                        <div class="stat-value stat-value-danger" id="statVencido">0</div>
+                        <div class="stat-label">Vencido</div>
+                    </div>
+                </div>
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-icon stat-icon-warning">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value stat-value-warning" id="statPendente">R$ 0,00</div>
+                        <div class="stat-label">Pendente</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-default">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="statValorTotal">R$ 0,00</div>
+                        <div class="stat-label">Valor Total</div>
                     </div>
                 </div>
             </div>
 
-            <!-- LISTA DE CONTAS -->
-            <div class="card">
+            <!-- Search Bar with Filters -->
+            <div class="search-bar-wrapper">
+                <div class="search-bar">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" id="search" placeholder="Pesquisar" oninput="filterContas()">
+                    
+                    <div class="search-bar-filters">
+                        <div class="filter-dropdown-inline">
+                            <select id="filterBanco" onchange="filterContas()">
+                                <option value="">Todos os Bancos</option>
+                            </select>
+                            <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="filter-dropdown-inline">
+                            <select id="filterPagamento" onchange="filterContas()">
+                                <option value="">Todas Formas</option>
+                            </select>
+                            <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="filter-dropdown-inline">
+                            <select id="filterStatus" onchange="filterContas()">
+                                <option value="">Todos os Status</option>
+                            </select>
+                            <svg class="dropdown-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="month-navigation-inline">
+                            <button onclick="changeMonth(-1)" class="month-nav-arrow" title="Mês anterior">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                            </button>
+                            <div class="month-display-inline">
+                                <span id="currentMonth">Carregando...</span>
+                            </div>
+                            <button onclick="changeMonth(1)" class="month-nav-arrow" title="Próximo mês">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button class="calendar-btn" onclick="toggleCalendar()" title="Selecionar mês">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                    </button>
+                    <button class="calendar-btn" onclick="sincronizarDados()" title="Sincronizar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calendar Modal -->
+            <div class="calendar-modal" id="calendarModal">
+                <div class="calendar-content">
+                    <div class="calendar-header">
+                        <button onclick="changeCalendarYear(-1)" class="calendar-year-nav">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <h3 id="calendarYear">2026</h3>
+                        <button onclick="changeCalendarYear(1)" class="calendar-year-nav">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="calendar-months" id="calendarMonths"></div>
+                </div>
+            </div>
+
+            <!-- Table Card -->
+            <div class="card table-card">
                 <div id="contasContainer"></div>
             </div>
         </div>
     </div>
 
-    <!-- BOTÃO FLUTUANTE -->
-    <button onclick="toggleForm()" class="floating-add-btn" title="Nova Conta">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-    </button>
+    <!-- MODAL DE ALERTA VENCIDOS -->
+    <div class="modal-overlay" id="vencidoModal" style="display: none;">
+        <div class="modal-content alert-modal">
+            <button class="modal-close-x" onclick="closeVencidoModal()" title="Fechar">✕</button>
+            <div class="modal-header-alert">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </div>
+            
+            <div class="modal-body" id="vencidoModalBody"></div>
+
+            <div class="modal-actions-alert">
+                <button type="button" onclick="closeVencidoModal()" class="btn-close-red">Fechar</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // Esconder splash após 3 segundos
         setTimeout(() => {
             const splash = document.getElementById('splashScreen');
             if (splash) splash.style.display = 'none';
         }, 3000);
     </script>
     <script src="script.js"></script>
+    <script src="calendar.js"></script>
 </body>
 </html>
