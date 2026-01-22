@@ -488,13 +488,6 @@ window.sincronizarDados = async function() {
 };
 
 // ============================================
-// FORMULÁRIO
-// ============================================
-window.toggleForm = function() {
-    showFormModal(null);
-};
-
-// ============================================
 // FORMULÁRIO COM SISTEMA DE OBSERVAÇÕES
 // ============================================
 window.toggleForm = function() {
@@ -1972,7 +1965,7 @@ function renderContas(lista) {
                                     onclick="togglePago('${c.id || c.tempId}')" 
                                     title="${c.status === 'PAGO' ? 'Marcar como pendente' : 'Marcar como pago'}"
                                     ${!c.id ? 'disabled' : ''}>
-                                    ✓
+                                    ${c.status === 'PAGO' ? '✓' : ''}
                             </button>
                         </td>
                         <td>${syncIndicator}${c.descricao}</td>
