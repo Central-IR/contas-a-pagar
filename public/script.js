@@ -1835,7 +1835,7 @@ function updateAllFilters() {
     
     const contasDoMes = contas.filter(c => {
         const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
-        return dataVenc.getMonth() === currentMonth && dataVenc.getFullYear() === currentYear;
+        return dataVenc.getMonth() === currentMonth.getMonth() && dataVenc.getFullYear() === currentMonth.getFullYear();
     });
     
     let temVencido = false, temPago = false, temPendente = false;
@@ -1874,8 +1874,8 @@ function filterContas() {
     
     let filtered = contas.filter(c => {
         const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
-        const mesMatch = dataVenc.getMonth() === currentMonth;
-        const anoMatch = dataVenc.getFullYear() === currentYear;
+        const mesMatch = dataVenc.getMonth() === currentMonth.getMonth();
+        const anoMatch = dataVenc.getFullYear() === currentMonth.getFullYear();
         return mesMatch && anoMatch;
     });
 
