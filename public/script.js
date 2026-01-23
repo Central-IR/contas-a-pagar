@@ -398,7 +398,14 @@ function updateDashboard() {
         cardVencido.classList.add('has-alert');
         if (pulseBadge) {
             pulseBadge.style.display = 'flex';
-            pulseBadge.textContent = qtdVencido;
+            // Mostrar ícone de alerta ao invés do número
+            pulseBadge.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            `;
         }
     } else {
         cardVencido.classList.remove('has-alert');
@@ -409,7 +416,7 @@ function updateDashboard() {
 }
 
 // ============================================
-// MODAL DE VENCIDOS - PADRONIZADO COM CONTROLE DE FRETE
+// MODAL DE VENCIDOS - CORRIGIDO
 // ============================================
 window.showVencidoModal = function() {
     const hoje = new Date();
@@ -504,7 +511,7 @@ window.closeVencidoModal = function() {
 window.sincronizarDados = async function() {
     showMessage('Sincronizando...', 'info');
     await loadContas();
-    showMessage('Dados sincronizados!', 'success');
+    showMessage('Dados sincronizados', 'success');
 };
 
 // ============================================
@@ -992,7 +999,7 @@ window.generateParcelas = function() {
 };
 
 // ============================================
-// FUNÇÕES DE SUBMIT
+// FUNÇÕES DE SUBMIT - COM MENSAGENS PADRONIZADAS
 // ============================================
 window.handleCreateSubmit = async function(event) {
     event.preventDefault();
@@ -1069,7 +1076,7 @@ async function salvarContaOtimista() {
     filterContas();
     closeFormModal();
     
-    showMessage('Conta cadastrada! Sincronizando...', 'success');
+    showMessage('Nova conta registrada', 'success');
     
     // 4. Adicionar à fila de processamento
     if (!isOnline) {
@@ -1155,7 +1162,7 @@ async function salvarContaParcelada() {
     filterContas();
     closeFormModal();
 
-    showMessage(`${numParcelas} parcelas cadastradas! Sincronizando...`, 'success');
+    showMessage('Nova conta registrada', 'success');
 
     if (!isOnline) {
         showMessage('Sistema offline. As parcelas serão sincronizadas quando voltar online.', 'warning');
@@ -1245,7 +1252,7 @@ async function editarContaOtimista(editId) {
     filterContas();
     closeFormModal();
     
-    showMessage('Conta atualizada! Sincronizando...', 'success');
+    showMessage('Registro atualizado', 'success');
     
     // 4. Sincronizar em background
     try {
@@ -1288,8 +1295,6 @@ async function editarContaOtimista(editId) {
         updateAllFilters();
         updateDashboard();
         filterContas();
-        
-        showMessage('✅ Conta sincronizada com sucesso!', 'success');
     } catch (error) {
         console.error('Erro ao sincronizar:', error);
         
@@ -1298,7 +1303,7 @@ async function editarContaOtimista(editId) {
         updateDashboard();
         filterContas();
         
-        showMessage(`❌ Erro ao sincronizar: ${error.message}`, 'error');
+        showMessage(`Erro ao sincronizar: ${error.message}`, 'error');
     }
 }
 
@@ -1382,7 +1387,7 @@ async function handleEditSubmitParcelas() {
     filterContas();
     closeFormModal();
     
-    showMessage(`Atualizando ${atualizacoes.length} parcela(s)...`, 'success');
+    showMessage('Registro atualizado', 'success');
     
     // Processar atualizações em background
     await processEditQueue(atualizacoes, backupOriginal, parcelasDoGrupo.length);
@@ -1448,10 +1453,8 @@ async function processEditQueue(atualizacoes, backupOriginal, totalParcelas) {
     filterContas();
     
     // Mostrar resultado final
-    if (erros.length === 0) {
-        showMessage(`✅ ${sucessos} parcela(s) atualizadas com sucesso!`, 'success');
-    } else {
-        showMessage(`⚠️ ${sucessos} de ${atualizacoes.length} parcelas atualizadas. Erros: ${erros.join('; ')}`, 'warning');
+    if (erros.length > 0) {
+        showMessage(`${sucessos} de ${atualizacoes.length} parcelas atualizadas. Erros: ${erros.join('; ')}`, 'warning');
     }
 }
 
@@ -1459,7 +1462,10 @@ window.closeFormModal = function() {
     const modal = document.getElementById('formModal');
     if (modal) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
-        setTimeout(() => modal.remove(), 200);
+        setTimeout(() => {
+            modal.remove();
+            showMessage('Registro cancelado', 'error');
+        }, 200);
     }
 };
 
@@ -1543,7 +1549,7 @@ window.deleteConta = async function(id) {
     updateAllFilters();
     updateDashboard();
     filterContas();
-    showMessage('Conta excluída!', 'success');
+    showMessage('Registro excluído', 'error');
 
     if (isOnline) {
         try {
