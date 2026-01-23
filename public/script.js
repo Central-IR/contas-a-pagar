@@ -392,10 +392,19 @@ function updateDashboard() {
     document.getElementById('statValorTotal').textContent = `R$ ${valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     
     const cardVencido = document.getElementById('cardVencido');
+    const pulseBadge = document.getElementById('pulseBadge');
+    
     if (qtdVencido > 0) {
         cardVencido.classList.add('has-alert');
+        if (pulseBadge) {
+            pulseBadge.style.display = 'flex';
+            pulseBadge.textContent = qtdVencido;
+        }
     } else {
         cardVencido.classList.remove('has-alert');
+        if (pulseBadge) {
+            pulseBadge.style.display = 'none';
+        }
     }
 }
 
