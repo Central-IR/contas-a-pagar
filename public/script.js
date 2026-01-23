@@ -400,7 +400,7 @@ function updateDashboard() {
 }
 
 // ============================================
-// MODAL DE VENCIDOS
+// MODAL DE VENCIDOS - PADRONIZADO COM CONTROLE DE FRETE
 // ============================================
 window.showVencidoModal = function() {
     const hoje = new Date();
@@ -418,64 +418,75 @@ window.showVencidoModal = function() {
         return dataVenc <= hoje;
     });
     
-    if (contasVencidas.length === 0) {
-        showMessage('Não há contas vencidas neste mês!', 'success');
-        return;
-    }
+    // Ordenar por data de vencimento (mais antiga primeiro)
+    contasVencidas.sort((a, b) => {
+        const dataA = new Date(a.data_vencimento);
+        const dataB = new Date(b.data_vencimento);
+        return dataA - dataB;
+    });
     
     const modal = document.getElementById('vencidoModal');
     const body = document.getElementById('vencidoModalBody');
     
-    const totalVencido = contasVencidas.reduce((sum, c) => sum + parseFloat(c.valor || 0), 0);
-    
-    body.innerHTML = `
-        <h3 style="color: #EF4444; margin-bottom: 20px; font-size: 20px; text-align: center;">
-            ⚠️ Contas Vencidas
-        </h3>
-        <p style="text-align: center; margin-bottom: 24px; color: var(--text-secondary);">
-            Total de <strong>${contasVencidas.length}</strong> conta(s) vencida(s) no valor de 
-            <strong style="color: #EF4444;">R$ ${totalVencido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-        </p>
-        <div style="max-height: 400px; overflow-y: auto;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border-color);">
-                        <th style="padding: 12px; text-align: left; font-weight: 600;">Descrição</th>
-                        <th style="padding: 12px; text-align: left; font-weight: 600;">Vencimento</th>
-                        <th style="padding: 12px; text-align: right; font-weight: 600;">Valor</th>
-                        <th style="padding: 12px; text-align: center; font-weight: 600;">Dias</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${contasVencidas.map(c => {
-                        const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
-                        const diasAtraso = Math.floor((hoje - dataVenc) / (1000 * 60 * 60 * 24));
-                        return `
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td style="padding: 12px;">${c.descricao}</td>
-                                <td style="padding: 12px;">${formatDate(c.data_vencimento)}</td>
-                                <td style="padding: 12px; text-align: right; font-weight: 600; color: #EF4444;">
-                                    R$ ${parseFloat(c.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                                </td>
-                                <td style="padding: 12px; text-align: center;">
-                                    <span style="background: #FEE2E2; color: #DC2626; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
-                                        ${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''}
-                                    </span>
-                                </td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
+    if (contasVencidas.length === 0) {
+        body.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.3; margin-bottom: 1rem;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 8l0 4"></path>
+                    <path d="M12 16l.01 0"></path>
+                </svg>
+                <p style="font-size: 1.1rem; font-weight: 600; margin: 0;">Nenhuma conta vencida</p>
+                <p style="font-size: 0.9rem; margin-top: 0.5rem;">Todas as contas estão dentro do prazo ou foram pagas</p>
+            </div>
+        `;
+    } else {
+        body.innerHTML = `
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Descrição</th>
+                            <th>Vencimento</th>
+                            <th style="text-align: right;">Valor</th>
+                            <th style="text-align: center;">Dias Atraso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${contasVencidas.map(c => {
+                            const dataVenc = new Date(c.data_vencimento + 'T00:00:00');
+                            const diasAtraso = Math.floor((hoje - dataVenc) / (1000 * 60 * 60 * 24));
+                            return `
+                                <tr>
+                                    <td>${c.descricao}</td>
+                                    <td style="white-space: nowrap;">${formatDate(c.data_vencimento)}</td>
+                                    <td style="text-align: right; font-weight: 700; color: #EF4444;">
+                                        R$ ${parseFloat(c.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="badge vencido">${diasAtraso} dia${diasAtraso !== 1 ? 's' : ''}</span>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
     
     modal.style.display = 'flex';
 };
 
 window.closeVencidoModal = function() {
     const modal = document.getElementById('vencidoModal');
-    modal.style.display = 'none';
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease forwards';
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.style.animation = '';
+        }, 200);
+    }
 };
 
 // ============================================
@@ -899,23 +910,103 @@ function atualizarListaObservacoes() {
     }
 }
 
-
-
 // ============================================
-// SUBMIT SIMPLES OTIMIZADO
+// FUNÇÕES DO FORMULÁRIO
 // ============================================
-async function handleSubmit(event) {
-    event.preventDefault();
-    const editId = document.getElementById('editId').value;
+window.selectFormType = function(type) {
+    formType = type;
     
-    if (editId) {
-        // Edição usa o fluxo normal
-        await salvarConta(editId);
+    const buttons = document.querySelectorAll('.form-type-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    const formSimple = document.getElementById('formSimple');
+    const formParcelado = document.getElementById('formParcelado');
+    
+    if (type === 'simple') {
+        formSimple.style.display = 'block';
+        formParcelado.style.display = 'none';
+        
+        // Tornar campos simples obrigatórios
+        document.getElementById('valor').required = true;
+        document.getElementById('data_vencimento').required = true;
+        document.getElementById('forma_pagamento').required = true;
+        document.getElementById('banco').required = true;
     } else {
-        // Novo cadastro usa cadastro otimista
+        formSimple.style.display = 'none';
+        formParcelado.style.display = 'block';
+        
+        // Remover obrigatoriedade dos campos simples
+        document.getElementById('valor').required = false;
+        document.getElementById('data_vencimento').required = false;
+        document.getElementById('forma_pagamento').required = false;
+        document.getElementById('banco').required = false;
+    }
+};
+
+window.generateParcelas = function() {
+    const numParcelasInput = document.getElementById('numParcelas');
+    const valorTotalInput = document.getElementById('valorTotal');
+    const dataInicioInput = document.getElementById('dataInicio');
+    const container = document.getElementById('parcelasContainer');
+
+    const numParcelas = parseInt(numParcelasInput?.value);
+    const valorTotal = parseFloat(valorTotalInput?.value);
+    const dataInicio = dataInicioInput?.value;
+
+    if (!numParcelas || !valorTotal || !dataInicio || numParcelas < 2) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const valorParcela = (valorTotal / numParcelas).toFixed(2);
+    const dataBase = new Date(dataInicio + 'T00:00:00');
+
+    let html = '<div class="parcelas-preview"><h4>Parcelas Geradas:</h4>';
+
+    for (let i = 0; i < numParcelas; i++) {
+        const dataVenc = new Date(dataBase);
+        dataVenc.setMonth(dataVenc.getMonth() + i);
+        const dataFormatada = dataVenc.toISOString().split('T')[0];
+
+        html += `
+            <div class="parcela-item">
+                <span class="parcela-numero">${i + 1}ª Parcela</span>
+                <span class="parcela-data">${formatDate(dataFormatada)}</span>
+                <span class="parcela-valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+};
+
+// ============================================
+// FUNÇÕES DE SUBMIT
+// ============================================
+window.handleCreateSubmit = async function(event) {
+    event.preventDefault();
+    
+    if (formType === 'parcelado') {
+        await salvarContaParcelada();
+    } else {
         await salvarContaOtimista();
     }
-}
+};
+
+window.handleEditSubmit = async function(event) {
+    event.preventDefault();
+    
+    const temParcelas = parcelasDoGrupo.length > 1;
+    
+    if (temParcelas) {
+        await handleEditSubmitParcelas();
+    } else {
+        const editId = document.getElementById('editId').value;
+        await editarContaOtimista(editId);
+    }
+};
 
 async function salvarContaOtimista() {
     // Validação dos campos obrigatórios
@@ -938,7 +1029,7 @@ async function salvarContaOtimista() {
         forma_pagamento: formaPagamento,
         banco: banco,
         data_pagamento: document.getElementById('data_pagamento')?.value || null,
-        observacoes: document.getElementById('observacoes')?.value?.trim() || null,
+        observacoes: document.getElementById('observacoesData')?.value || '[]',
         status: document.getElementById('data_pagamento')?.value ? 'PAGO' : 'PENDENTE'
     };
 
@@ -985,508 +1076,94 @@ async function salvarContaOtimista() {
     processQueue();
 }
 
-// ============================================
-// SUBMIT EDIÇÃO DE GRUPO OTIMIZADO
-// ============================================
-async function handleEditSubmit(event) {
-    event.preventDefault();
-    
-    // Verificar se é conta simples ou parcelada
-    const temParcelas = document.getElementById('temParcelas')?.value === 'true';
-    
-    if (!temParcelas) {
-        // É uma conta simples - usar edição otimista
-        const editId = document.getElementById('editId').value;
-        await editarContaOtimista(editId);
-        return;
-    }
-    
-    // É uma conta parcelada - processar todas as parcelas
-    // Coletar dados comuns
+async function salvarContaParcelada() {
     const descricao = document.getElementById('descricao')?.value?.trim();
     const documento = document.getElementById('documento')?.value?.trim() || null;
-    const observacoes = document.getElementById('observacoesData')?.value || '[]';
-
-    if (!descricao) {
-        showMessage('Por favor, preencha a descrição.', 'error');
-        return;
-    }
-
-    const dadosComuns = { descricao, documento, observacoes };
-    
-    if (!isOnline) {
-        showMessage('Sistema offline. Dados não foram salvos.', 'error');
-        closeFormModal();
-        return;
-    }
-    
-    // ====== EDIÇÃO OTIMISTA PARA PARCELAS ======
-    
-    // 1. Coletar todas as atualizações
-    const atualizacoes = [];
-    const backupOriginal = [];
-    
-    // Backup e atualização local das parcelas existentes
-    for (const parcela of parcelasDoGrupo) {
-        if (parcela.isNew) continue;
-        
-        const vencInput = document.getElementById(`parcela_vencimento_${parcela.id}`);
-        const valorInput = document.getElementById(`parcela_valor_${parcela.id}`);
-        const pagInput = document.getElementById(`parcela_pagamento_${parcela.id}`);
-        const formaPagInput = document.getElementById(`parcela_forma_pagamento_${parcela.id}`);
-        const bancoInput = document.getElementById(`parcela_banco_${parcela.id}`);
-        
-        if (!vencInput || !valorInput || !formaPagInput || !bancoInput) continue;
-        
-        const index = contas.findIndex(c => String(c.id) === String(parcela.id));
-        if (index !== -1) {
-            // Fazer backup
-            backupOriginal.push({ index, data: {...contas[index]} });
-            
-            // Atualizar localmente
-            contas[index] = {
-                ...contas[index],
-                ...dadosComuns,
-                valor: parseFloat(valorInput.value),
-                data_vencimento: vencInput.value,
-                data_pagamento: pagInput?.value || null,
-                forma_pagamento: formaPagInput.value,
-                banco: bancoInput.value,
-                status: pagInput?.value ? 'PAGO' : 'PENDENTE',
-                parcela_numero: parcela.parcela_numero,
-                parcela_total: parcelasDoGrupo.filter(p => !p.isNew).length,
-                synced: false
-            };
-            
-            // Adicionar à lista de atualizações
-            atualizacoes.push({
-                id: parcela.id,
-                data: {
-                    ...dadosComuns,
-                    valor: parseFloat(valorInput.value),
-                    data_vencimento: vencInput.value,
-                    data_pagamento: pagInput?.value || null,
-                    forma_pagamento: formaPagInput.value,
-                    banco: bancoInput.value,
-                    status: pagInput?.value ? 'PAGO' : 'PENDENTE',
-                    parcela_numero: parcela.parcela_numero,
-                    parcela_total: parcelasDoGrupo.filter(p => !p.isNew).length
-                }
-            });
-        }
-    }
-    
-    // Adicionar novas parcelas temporariamente
-    const novasParcelas = parcelasDoGrupo.filter(p => p.isNew);
-    const totalParcelas = parcelasDoGrupo.length;
-    
-    for (const novaParcela of novasParcelas) {
-        const vencInput = document.getElementById(`parcela_vencimento_${novaParcela.id}`);
-        const valorInput = document.getElementById(`parcela_valor_${novaParcela.id}`);
-        const pagInput = document.getElementById(`parcela_pagamento_${novaParcela.id}`);
-        const formaPagInput = document.getElementById(`parcela_forma_pagamento_${novaParcela.id}`);
-        const bancoInput = document.getElementById(`parcela_banco_${novaParcela.id}`);
-        
-        if (!vencInput || !valorInput || !formaPagInput || !bancoInput) continue;
-        
-        const tempParcela = {
-            ...dadosComuns,
-            valor: parseFloat(valorInput.value),
-            data_vencimento: vencInput.value,
-            data_pagamento: pagInput?.value || null,
-            forma_pagamento: formaPagInput.value,
-            banco: bancoInput.value,
-            status: pagInput?.value ? 'PAGO' : 'PENDENTE',
-            parcela_numero: novaParcela.parcela_numero,
-            parcela_total: totalParcelas,
-            grupo_id: currentGrupoId,
-            id: null,
-            tempId: novaParcela.id,
-            synced: false
-        };
-        
-        contas.push(tempParcela);
-        
-        atualizacoes.push({
-            isNew: true,
-            tempId: novaParcela.id,
-            data: {
-                ...dadosComuns,
-                valor: parseFloat(valorInput.value),
-                data_vencimento: vencInput.value,
-                data_pagamento: pagInput?.value || null,
-                forma_pagamento: formaPagInput.value,
-                banco: bancoInput.value,
-                status: pagInput?.value ? 'PAGO' : 'PENDENTE',
-                parcela_numero: novaParcela.parcela_numero,
-                parcela_total: totalParcelas,
-                grupo_id: currentGrupoId
-            }
-        });
-    }
-    
-    // 2. Atualizar UI imediatamente
-    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
-    updateAllFilters();
-    updateDashboard();
-    filterContas();
-    closeFormModal();
-    
-    showMessage(`Atualizando ${atualizacoes.length} parcela(s)...`, 'success');
-    
-    // 3. Processar atualizações em background (lotes de 5)
-    processEditQueue(atualizacoes, backupOriginal, totalParcelas);
-}
-
-async function processEditQueue(atualizacoes, backupOriginal, totalParcelas) {
-    const BATCH_SIZE = 5;
-    let sucessos = 0;
-    let erros = [];
-    
-    // Processar em lotes
-    for (let i = 0; i < atualizacoes.length; i += BATCH_SIZE) {
-        const batch = atualizacoes.slice(i, i + BATCH_SIZE);
-        
-        const results = await Promise.allSettled(
-            batch.map(async (item) => {
-                if (item.isNew) {
-                    // Criar nova parcela
-                    const response = await fetch(`${API_URL}/contas`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Session-Token': sessionToken,
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify(item.data),
-                        mode: 'cors'
-                    });
-                    
-                    if (!response.ok) throw new Error(`Erro ${response.status}`);
-                    
-                    const savedData = await response.json();
-                    
-                    // Atualizar conta temporária
-                    const index = contas.findIndex(c => c.tempId === item.tempId);
-                    if (index !== -1) {
-                        contas[index] = savedData;
-                    }
-                    
-                    return { success: true, id: item.tempId };
-                } else {
-                    // Atualizar parcela existente
-                    const response = await fetch(`${API_URL}/contas/${item.id}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Session-Token': sessionToken,
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify(item.data),
-                        mode: 'cors'
-                    });
-                    
-                    if (!response.ok) throw new Error(`Erro ${response.status}`);
-                    
-                    const savedData = await response.json();
-                    
-                    // Atualizar com dados do servidor
-                    const index = contas.findIndex(c => String(c.id) === String(item.id));
-                    if (index !== -1) {
-                        contas[index] = savedData;
-                    }
-                    
-                    return { success: true, id: item.id };
-                }
-            })
-        );
-        
-        // Contabilizar resultados
-        results.forEach((result, idx) => {
-            if (result.status === 'fulfilled') {
-                sucessos++;
-            } else {
-                const item = batch[idx];
-                erros.push(`Parcela ${item.data.parcela_numero}: ${result.reason.message}`);
-                
-                // Reverter alteração em caso de erro
-                if (!item.isNew) {
-                    const backup = backupOriginal.find(b => contas[b.index]?.id === item.id);
-                    if (backup) {
-                        contas[backup.index] = backup.data;
-                    }
-                } else {
-                    contas = contas.filter(c => c.tempId !== item.tempId);
-                }
-            }
-        });
-    }
-    
-    // Atualizar parcela_total em todas as parcelas do grupo (não bloqueia)
-    if (sucessos > 0 && totalParcelas) {
-        Promise.allSettled(
-            atualizacoes.filter(a => !a.isNew).map(item =>
-                fetch(`${API_URL}/contas/${item.id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Session-Token': sessionToken,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ parcela_total: totalParcelas }),
-                    mode: 'cors'
-                })
-            )
-        );
-    }
-    
-    // Atualizar UI final
-    lastDataHash = JSON.stringify(contas.map(c => c.id));
-    updateAllFilters();
-    updateDashboard();
-    filterContas();
-    
-    // Mostrar resultado final
-    if (erros.length === 0) {
-        showMessage(`✅ ${sucessos} parcela(s) atualizadas com sucesso!`, 'success');
-    } else {
-        showMessage(`⚠️ ${sucessos} de ${atualizacoes.length} parcelas atualizadas. Erros: ${erros.join('; ')}`, 'warning');
-    }
-}
-
-// ============================================
-// SUBMIT PARCELADO OTIMIZADO
-// ============================================
-async function handleSubmitParcelado(event) {
-    event.preventDefault();
-    
-    if (numParcelas === 0) {
-        showMessage('Adicione pelo menos uma parcela!', 'error');
-        return;
-    }
-    
-    // Validar campos comuns
-    const descricao = document.getElementById('descricao')?.value?.trim();
+    const numParcelas = parseInt(document.getElementById('numParcelas')?.value);
+    const valorTotal = parseFloat(document.getElementById('valorTotal')?.value);
+    const dataInicio = document.getElementById('dataInicio')?.value;
     const formaPagamento = document.getElementById('forma_pagamento')?.value;
     const banco = document.getElementById('banco')?.value;
+    const observacoesData = document.getElementById('observacoesData')?.value || '[]';
 
-    if (!descricao || !formaPagamento || !banco) {
-        showMessage('Por favor, preencha todos os campos obrigatórios das abas 1 e 2.', 'error');
-        return;
-    }
-
-    // Coletar dados comuns
-    const dadosComuns = {
-        documento: document.getElementById('documento')?.value?.trim() || null,
-        descricao: descricao,
-        observacoes: document.getElementById('observacoes')?.value?.trim() || null,
-        forma_pagamento: formaPagamento,
-        banco: banco,
-    };
-    
-    // Gerar grupo_id único para todas as parcelas
-    const grupoId = generateUUID();
-    
-    // Coletar e validar dados de cada parcela
-    const parcelas = [];
-    for (let i = 1; i <= numParcelas; i++) {
-        const vencimento = document.getElementById(`parcela_vencimento_${i}`);
-        const valor = document.getElementById(`parcela_valor_${i}`);
-        
-        if (!vencimento || !vencimento.value) {
-            showMessage(`Parcela ${i}: Data de vencimento não preenchida!`, 'error');
-            return;
-        }
-        
-        if (!valor || !valor.value || parseFloat(valor.value) <= 0) {
-            showMessage(`Parcela ${i}: Valor inválido!`, 'error');
-            return;
-        }
-        
-        if (vencimento && valor) {
-            parcelas.push({
-                ...dadosComuns,
-                data_vencimento: vencimento.value,
-                valor: parseFloat(valor.value),
-                parcela_numero: i,
-                parcela_total: numParcelas,
-                status: 'PENDENTE',
-                data_pagamento: null,
-                grupo_id: grupoId
-            });
-        }
-    }
-    
-    if (parcelas.length === 0) {
-        showMessage('Nenhuma parcela válida encontrada!', 'error');
-        return;
-    }
-    
-    // ====== OTIMIZAÇÃO: CADASTRO INSTANTÂNEO ======
-    
-    // 1. Criar contas temporárias localmente (INSTANTÂNEO)
-    const contasTemporarias = parcelas.map((parcela, index) => ({
-        ...parcela,
-        id: null,
-        tempId: `temp_${grupoId}_${index}`,
-        synced: false
-    }));
-    
-    // 2. Adicionar à lista local imediatamente
-    contas.push(...contasTemporarias);
-    
-    // 3. Atualizar interface (INSTANTÂNEO)
-    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
-    updateAllFilters();
-    updateDashboard();
-    filterContas();
-    
-    // 4. Fechar modal imediatamente
-    closeFormModal();
-    
-    // 5. Mostrar feedback de sucesso instantâneo
-    showMessage(`${parcelas.length} parcelas cadastradas! Sincronizando...`, 'success');
-    
-    // 6. Adicionar à fila de processamento em background
-    parcelas.forEach((parcela, index) => {
-        addToQueue({
-            tempId: `temp_${grupoId}_${index}`,
-            data: parcela
-        });
-    });
-    
-    // 7. Processar fila em background (NÃO BLOQUEIA A UI)
-    if (!isOnline) {
-        showMessage('Sistema offline. As parcelas serão sincronizadas quando voltar online.', 'warning');
-        return;
-    }
-    
-    processQueue().then(() => {
-        // Atualizar interface após sincronização completa
-        lastDataHash = JSON.stringify(contas.map(c => c.id));
-        updateAllFilters();
-        updateDashboard();
-        filterContas();
-        
-        const sucessos = contas.filter(c => c.grupo_id === grupoId && c.id !== null).length;
-        if (sucessos === parcelas.length) {
-            showMessage(`✅ Todas as ${parcelas.length} parcelas foram sincronizadas!`, 'success');
-        }
-    });
-}
-
-// Manter a função salvarConta original para edições
-async function salvarConta(editId) {
-    // Validação dos campos obrigatórios
-    const descricao = document.getElementById('descricao')?.value?.trim();
-    const valor = document.getElementById('valor')?.value;
-    const dataVencimento = document.getElementById('data_vencimento')?.value;
-    const formaPagamento = document.getElementById('forma_pagamento')?.value;
-    const banco = document.getElementById('banco')?.value;
-
-    if (!descricao || !valor || !dataVencimento || !formaPagamento || !banco) {
+    if (!descricao || !numParcelas || !valorTotal || !dataInicio || !formaPagamento || !banco) {
         showMessage('Por favor, preencha todos os campos obrigatórios.', 'error');
         return;
     }
 
-    const formData = {
-        documento: document.getElementById('documento')?.value?.trim() || null,
-        descricao: descricao,
-        valor: parseFloat(valor),
-        data_vencimento: dataVencimento,
-        forma_pagamento: formaPagamento,
-        banco: banco,
-        data_pagamento: document.getElementById('data_pagamento')?.value || null,
-        observacoes: document.getElementById('observacoes')?.value?.trim() || null,
-    };
-
-    // Validar valor numérico
-    if (isNaN(formData.valor) || formData.valor <= 0) {
-        showMessage('Valor inválido. Digite um número maior que zero.', 'error');
+    if (isNaN(valorTotal) || valorTotal <= 0) {
+        showMessage('Valor total inválido.', 'error');
         return;
     }
 
-    // Apenas para edição, manter parcela_numero e parcela_total
-    if (editId) {
-        const conta = contas.find(c => String(c.id) === String(editId));
-        if (conta) {
-            formData.parcela_numero = conta.parcela_numero;
-            formData.parcela_total = conta.parcela_total;
-        }
+    if (numParcelas < 2 || numParcelas > 360) {
+        showMessage('Número de parcelas deve ser entre 2 e 360.', 'error');
+        return;
     }
 
-    if (editId) {
-        const conta = contas.find(c => String(c.id) === String(editId));
-        if (conta && !formData.data_pagamento) {
-            formData.status = conta.status;
-        } else {
-            formData.status = formData.data_pagamento ? 'PAGO' : 'PENDENTE';
-        }
-    } else {
-        formData.status = formData.data_pagamento ? 'PAGO' : 'PENDENTE';
+    const valorParcela = (valorTotal / numParcelas).toFixed(2);
+    const dataBase = new Date(dataInicio + 'T00:00:00');
+    const grupoId = generateUUID();
+
+    const parcelas = [];
+    for (let i = 0; i < numParcelas; i++) {
+        const dataVenc = new Date(dataBase);
+        dataVenc.setMonth(dataVenc.getMonth() + i);
+
+        parcelas.push({
+            documento,
+            descricao,
+            observacoes: observacoesData,
+            valor: parseFloat(valorParcela),
+            data_vencimento: dataVenc.toISOString().split('T')[0],
+            data_pagamento: null,
+            forma_pagamento: formaPagamento,
+            banco,
+            status: 'PENDENTE',
+            parcela_numero: i + 1,
+            parcela_total: numParcelas,
+            grupo_id: grupoId
+        });
     }
+
+    // Adicionar todas as parcelas localmente (otimista)
+    const tempIds = [];
+    for (const parcela of parcelas) {
+        const tempId = `temp_${Date.now()}_${Math.random()}`;
+        tempIds.push(tempId);
+        contas.push({
+            ...parcela,
+            id: null,
+            tempId,
+            synced: false
+        });
+    }
+
+    // Atualizar UI
+    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
+    updateAllFilters();
+    updateDashboard();
+    filterContas();
+    closeFormModal();
+
+    showMessage(`${numParcelas} parcelas cadastradas! Sincronizando...`, 'success');
 
     if (!isOnline) {
-        showMessage('Sistema offline. Dados não foram salvos.', 'error');
-        closeFormModal();
+        showMessage('Sistema offline. As parcelas serão sincronizadas quando voltar online.', 'warning');
         return;
     }
 
-    try {
-        const url = editId ? `${API_URL}/contas/${editId}` : `${API_URL}/contas`;
-        const method = editId ? 'PUT' : 'POST';
-
-        console.log('Enviando dados:', formData);
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Session-Token': sessionToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(formData),
-            mode: 'cors'
+    // Adicionar à fila
+    for (let i = 0; i < parcelas.length; i++) {
+        addToQueue({
+            tempId: tempIds[i],
+            data: parcelas[i]
         });
-
-        if (tratarErroAutenticacao(response)) return;
-
-        if (!response.ok) {
-            let errorMessage = 'Erro ao salvar';
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.error || errorData.message || errorMessage;
-            } catch (e) {
-                errorMessage = `Erro ${response.status}: ${response.statusText}`;
-            }
-            throw new Error(errorMessage);
-        }
-
-        const savedData = await response.json();
-
-        if (editId) {
-            const index = contas.findIndex(c => String(c.id) === String(editId));
-            if (index !== -1) contas[index] = savedData;
-            showMessage('Conta atualizada com sucesso!', 'success');
-        } else {
-            contas.push(savedData);
-            showMessage('Conta criada com sucesso!', 'success');
-        }
-
-        lastDataHash = JSON.stringify(contas.map(c => c.id));
-        updateAllFilters();
-        updateDashboard();
-        filterContas();
-        closeFormModal();
-    } catch (error) {
-        console.error('Erro completo:', error);
-        showMessage(`Erro: ${error.message}`, 'error');
     }
+
+    processQueue();
 }
 
-// ============================================
-// EDIÇÃO OTIMISTA PARA CONTA SIMPLES
-// ============================================
 async function editarContaOtimista(editId) {
     // Validação dos campos obrigatórios
     const descricao = document.getElementById('descricao')?.value?.trim();
@@ -1614,6 +1291,182 @@ async function editarContaOtimista(editId) {
         
         showMessage(`❌ Erro ao sincronizar: ${error.message}`, 'error');
     }
+}
+
+async function handleEditSubmitParcelas() {
+    // Coletar dados comuns
+    const descricao = document.getElementById('descricao')?.value?.trim();
+    const documento = document.getElementById('documento')?.value?.trim() || null;
+    const observacoes = document.getElementById('observacoesData')?.value || '[]';
+
+    if (!descricao) {
+        showMessage('Por favor, preencha a descrição.', 'error');
+        return;
+    }
+
+    const dadosComuns = { descricao, documento, observacoes };
+    
+    if (!isOnline) {
+        showMessage('Sistema offline. Dados não foram salvos.', 'error');
+        closeFormModal();
+        return;
+    }
+    
+    // Coletar todas as atualizações
+    const atualizacoes = [];
+    const backupOriginal = [];
+    
+    // Backup e atualização local das parcelas existentes
+    for (const parcela of parcelasDoGrupo) {
+        if (parcela.isNew) continue;
+        
+        const vencInput = document.getElementById(`parcela_vencimento_${parcela.id}`);
+        const valorInput = document.getElementById(`parcela_valor_${parcela.id}`);
+        const pagInput = document.getElementById(`parcela_pagamento_${parcela.id}`);
+        const formaPagInput = document.getElementById(`parcela_forma_pagamento_${parcela.id}`);
+        const bancoInput = document.getElementById(`parcela_banco_${parcela.id}`);
+        
+        if (!vencInput || !valorInput || !formaPagInput || !bancoInput) continue;
+        
+        const index = contas.findIndex(c => String(c.id) === String(parcela.id));
+        if (index !== -1) {
+            // Fazer backup
+            backupOriginal.push({ index, data: {...contas[index]} });
+            
+            // Atualizar localmente
+            contas[index] = {
+                ...contas[index],
+                ...dadosComuns,
+                valor: parseFloat(valorInput.value),
+                data_vencimento: vencInput.value,
+                data_pagamento: pagInput?.value || null,
+                forma_pagamento: formaPagInput.value,
+                banco: bancoInput.value,
+                status: pagInput?.value ? 'PAGO' : 'PENDENTE',
+                parcela_numero: parcela.parcela_numero,
+                parcela_total: parcelasDoGrupo.filter(p => !p.isNew).length,
+                synced: false
+            };
+            
+            // Adicionar à lista de atualizações
+            atualizacoes.push({
+                id: parcela.id,
+                data: {
+                    ...dadosComuns,
+                    valor: parseFloat(valorInput.value),
+                    data_vencimento: vencInput.value,
+                    data_pagamento: pagInput?.value || null,
+                    forma_pagamento: formaPagInput.value,
+                    banco: bancoInput.value,
+                    status: pagInput?.value ? 'PAGO' : 'PENDENTE',
+                    parcela_numero: parcela.parcela_numero,
+                    parcela_total: parcelasDoGrupo.filter(p => !p.isNew).length
+                }
+            });
+        }
+    }
+    
+    // Atualizar UI imediatamente
+    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
+    updateAllFilters();
+    updateDashboard();
+    filterContas();
+    closeFormModal();
+    
+    showMessage(`Atualizando ${atualizacoes.length} parcela(s)...`, 'success');
+    
+    // Processar atualizações em background
+    await processEditQueue(atualizacoes, backupOriginal, parcelasDoGrupo.length);
+}
+
+async function processEditQueue(atualizacoes, backupOriginal, totalParcelas) {
+    const BATCH_SIZE = 5;
+    let sucessos = 0;
+    let erros = [];
+    
+    // Processar em lotes
+    for (let i = 0; i < atualizacoes.length; i += BATCH_SIZE) {
+        const batch = atualizacoes.slice(i, i + BATCH_SIZE);
+        
+        const results = await Promise.allSettled(
+            batch.map(async (item) => {
+                const response = await fetch(`${API_URL}/contas/${item.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-Token': sessionToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(item.data),
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) throw new Error(`Erro ${response.status}`);
+                
+                const savedData = await response.json();
+                
+                // Atualizar com dados do servidor
+                const index = contas.findIndex(c => String(c.id) === String(item.id));
+                if (index !== -1) {
+                    contas[index] = savedData;
+                }
+                
+                return { success: true, id: item.id };
+            })
+        );
+        
+        // Contabilizar resultados
+        results.forEach((result, idx) => {
+            if (result.status === 'fulfilled') {
+                sucessos++;
+            } else {
+                const item = batch[idx];
+                erros.push(`Parcela ${item.data.parcela_numero}: ${result.reason.message}`);
+                
+                // Reverter alteração em caso de erro
+                const backup = backupOriginal.find(b => contas[b.index]?.id === item.id);
+                if (backup) {
+                    contas[backup.index] = backup.data;
+                }
+            }
+        });
+    }
+    
+    // Atualizar UI final
+    lastDataHash = JSON.stringify(contas.map(c => c.id));
+    updateAllFilters();
+    updateDashboard();
+    filterContas();
+    
+    // Mostrar resultado final
+    if (erros.length === 0) {
+        showMessage(`✅ ${sucessos} parcela(s) atualizadas com sucesso!`, 'success');
+    } else {
+        showMessage(`⚠️ ${sucessos} de ${atualizacoes.length} parcelas atualizadas. Erros: ${erros.join('; ')}`, 'warning');
+    }
+}
+
+window.closeFormModal = function() {
+    const modal = document.getElementById('formModal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.2s ease forwards';
+        setTimeout(() => modal.remove(), 200);
+    }
+};
+
+function applyUppercaseFields() {
+    const camposMaiusculas = ['documento', 'descricao'];
+
+    camposMaiusculas.forEach(campoId => {
+        const campo = document.getElementById(campoId);
+        if (campo) {
+            campo.addEventListener('input', (e) => {
+                const start = e.target.selectionStart;
+                e.target.value = e.target.value.toUpperCase();
+                e.target.setSelectionRange(start, start);
+            });
+        }
+    });
 }
 
 // ============================================
@@ -1920,7 +1773,7 @@ function filterContas() {
 }
 
 // ============================================
-// RENDERIZAÇÃO COM INDICADOR DE SINCRONIZAÇÃO
+// RENDERIZAÇÃO COM CHECKBOX PADRONIZADO - 40x40px
 // ============================================
 function renderContas(lista) {
     const container = document.getElementById('contasContainer');
@@ -1936,7 +1789,9 @@ function renderContas(lista) {
         <table>
             <thead>
                 <tr>
-                    <th style="text-align: center; width: 60px;"> </th>
+                    <th style="text-align: center; width: 60px;">
+                        <span style="font-size: 1.1rem;">✓</span>
+                    </th>
                     <th>Descrição</th>
                     <th>Valor</th>
                     <th>Vencimento</th>
@@ -1958,22 +1813,23 @@ function renderContas(lista) {
                         ? '<span style="color: orange; font-size: 0.8em;" title="Sincronizando...">⟳</span> '
                         : '';
                     
+                    const isPago = c.status === 'PAGO';
+                    
                     return `
-                    <tr class="${c.status === 'PAGO' ? 'row-pago' : ''}">
-                        <td style="text-align: center;">
-                            <button class="check-btn ${c.status === 'PAGO' ? 'checked' : ''}" 
+                    <tr class="${isPago ? 'row-pago' : ''}">
+                        <td style="text-align: center; padding: 8px;">
+                            <button class="check-btn ${isPago ? 'checked' : ''}" 
                                     onclick="togglePago('${c.id || c.tempId}')" 
-                                    title="${c.status === 'PAGO' ? 'Marcar como pendente' : 'Marcar como pago'}"
+                                    title="${isPago ? 'Marcar como pendente' : 'Marcar como pago'}"
                                     ${!c.id ? 'disabled' : ''}>
-                                    ${c.status === 'PAGO' ? '✓' : ''}
                             </button>
                         </td>
                         <td>${syncIndicator}${c.descricao}</td>
                         <td><strong>R$ ${parseFloat(c.valor).toFixed(2)}</strong></td>
-                        <td>${formatDate(c.data_vencimento)}</td>
+                        <td style="white-space: nowrap;">${formatDate(c.data_vencimento)}</td>
                         <td style="text-align: center;">${numParcelas}</td>
                         <td>${c.banco || '-'}</td>
-                        <td>${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
+                        <td style="white-space: nowrap;">${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
                         <td>${getStatusBadge(getStatusDinamico(c))}</td>
                         <td class="actions-cell" style="text-align: center;">
                             <button onclick="viewConta('${c.id || c.tempId}')" class="action-btn view" ${!c.id ? 'disabled' : ''}>Ver</button>
@@ -2030,270 +1886,6 @@ function showMessage(message, type) {
         div.style.animation = 'slideOut 0.3s ease forwards';
         setTimeout(() => div.remove(), 300);
     }, 3000);
-}
-
-function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-// ============================================
-// FUNÇÕES DE SUBMIT
-// ============================================
-window.handleCreateSubmit = async function(event) {
-    event.preventDefault();
-    await salvarContaOtimista();
-};
-
-async function salvarContaOtimista() {
-    // Verificar tipo de formulário
-    if (formType === 'parcelado') {
-        await salvarContaParcelada();
-        return;
-    }
-
-    // Validação dos campos obrigatórios
-    const descricao = document.getElementById('descricao')?.value?.trim();
-    const valor = document.getElementById('valor')?.value;
-    const dataVencimento = document.getElementById('data_vencimento')?.value;
-    const formaPagamento = document.getElementById('forma_pagamento')?.value;
-    const banco = document.getElementById('banco')?.value;
-
-    if (!descricao || !valor || !dataVencimento || !formaPagamento || !banco) {
-        showMessage('Por favor, preencha todos os campos obrigatórios.', 'error');
-        return;
-    }
-
-    const formData = {
-        documento: document.getElementById('documento')?.value?.trim() || null,
-        descricao: descricao,
-        valor: parseFloat(valor),
-        data_vencimento: dataVencimento,
-        forma_pagamento: formaPagamento,
-        banco: banco,
-        data_pagamento: document.getElementById('data_pagamento')?.value || null,
-        observacoes: document.getElementById('observacoesData')?.value || '[]',
-        status: document.getElementById('data_pagamento')?.value ? 'PAGO' : 'PENDENTE'
-    };
-
-    // Validar valor numérico
-    if (isNaN(formData.valor) || formData.valor <= 0) {
-        showMessage('Valor inválido. Digite um número maior que zero.', 'error');
-        return;
-    }
-
-    // ====== CADASTRO OTIMISTA ======
-    
-    // 1. Criar conta temporária
-    const tempId = `temp_${Date.now()}`;
-    const contaTemporaria = {
-        ...formData,
-        id: null,
-        tempId: tempId,
-        synced: false
-    };
-    
-    // 2. Adicionar localmente
-    contas.push(contaTemporaria);
-    
-    // 3. Atualizar UI imediatamente
-    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
-    updateAllFilters();
-    updateDashboard();
-    filterContas();
-    closeFormModal();
-    
-    showMessage('Conta cadastrada! Sincronizando...', 'success');
-    
-    // 4. Adicionar à fila de processamento
-    if (!isOnline) {
-        showMessage('Sistema offline. A conta será sincronizada quando voltar online.', 'warning');
-        return;
-    }
-    
-    addToQueue({
-        tempId: tempId,
-        data: formData
-    });
-    
-    processQueue();
-}
-
-// ============================================
-// FUNÇÕES DO FORMULÁRIO
-// ============================================
-window.selectFormType = function(type) {
-    formType = type;
-    
-    const buttons = document.querySelectorAll('.form-type-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    const formSimple = document.getElementById('formSimple');
-    const formParcelado = document.getElementById('formParcelado');
-    
-    if (type === 'simple') {
-        formSimple.style.display = 'block';
-        formParcelado.style.display = 'none';
-        
-        // Tornar campos simples obrigatórios
-        document.getElementById('valor').required = true;
-        document.getElementById('data_vencimento').required = true;
-        document.getElementById('forma_pagamento').required = true;
-        document.getElementById('banco').required = true;
-    } else {
-        formSimple.style.display = 'none';
-        formParcelado.style.display = 'block';
-        
-        // Remover obrigatoriedade dos campos simples
-        document.getElementById('valor').required = false;
-        document.getElementById('data_vencimento').required = false;
-        document.getElementById('forma_pagamento').required = false;
-        document.getElementById('banco').required = false;
-    }
-};
-
-window.generateParcelas = function() {
-    const numParcelasInput = document.getElementById('numParcelas');
-    const valorTotalInput = document.getElementById('valorTotal');
-    const dataInicioInput = document.getElementById('dataInicio');
-    const container = document.getElementById('parcelasContainer');
-
-    const numParcelas = parseInt(numParcelasInput?.value);
-    const valorTotal = parseFloat(valorTotalInput?.value);
-    const dataInicio = dataInicioInput?.value;
-
-    if (!numParcelas || !valorTotal || !dataInicio || numParcelas < 2) {
-        container.innerHTML = '';
-        return;
-    }
-
-    const valorParcela = (valorTotal / numParcelas).toFixed(2);
-    const dataBase = new Date(dataInicio + 'T00:00:00');
-
-    let html = '<div class="parcelas-preview"><h4>Parcelas Geradas:</h4>';
-
-    for (let i = 0; i < numParcelas; i++) {
-        const dataVenc = new Date(dataBase);
-        dataVenc.setMonth(dataVenc.getMonth() + i);
-        const dataFormatada = dataVenc.toISOString().split('T')[0];
-
-        html += `
-            <div class="parcela-item">
-                <span class="parcela-numero">${i + 1}ª Parcela</span>
-                <span class="parcela-data">${formatDate(dataFormatada)}</span>
-                <span class="parcela-valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-            </div>
-        `;
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
-};
-
-async function salvarContaParcelada() {
-    const descricao = document.getElementById('descricao')?.value?.trim();
-    const documento = document.getElementById('documento')?.value?.trim() || null;
-    const numParcelas = parseInt(document.getElementById('numParcelas')?.value);
-    const valorTotal = parseFloat(document.getElementById('valorTotal')?.value);
-    const dataInicio = document.getElementById('dataInicio')?.value;
-    const formaPagamento = document.getElementById('forma_pagamento')?.value;
-    const banco = document.getElementById('banco')?.value;
-    const observacoesData = document.getElementById('observacoesData')?.value || '[]';
-
-    if (!descricao || !numParcelas || !valorTotal || !dataInicio || !formaPagamento || !banco) {
-        showMessage('Por favor, preencha todos os campos obrigatórios.', 'error');
-        return;
-    }
-
-    if (isNaN(valorTotal) || valorTotal <= 0) {
-        showMessage('Valor total inválido.', 'error');
-        return;
-    }
-
-    if (numParcelas < 2 || numParcelas > 360) {
-        showMessage('Número de parcelas deve ser entre 2 e 360.', 'error');
-        return;
-    }
-
-    const valorParcela = (valorTotal / numParcelas).toFixed(2);
-    const dataBase = new Date(dataInicio + 'T00:00:00');
-    const grupoId = generateUUID();
-
-    const parcelas = [];
-    for (let i = 0; i < numParcelas; i++) {
-        const dataVenc = new Date(dataBase);
-        dataVenc.setMonth(dataVenc.getMonth() + i);
-
-        parcelas.push({
-            documento,
-            descricao,
-            observacoes: observacoesData,
-            valor: parseFloat(valorParcela),
-            data_vencimento: dataVenc.toISOString().split('T')[0],
-            data_pagamento: null,
-            forma_pagamento: formaPagamento,
-            banco,
-            status: 'PENDENTE',
-            parcela_numero: i + 1,
-            parcela_total: numParcelas,
-            grupo_id: grupoId
-        });
-    }
-
-    // Adicionar todas as parcelas localmente (otimista)
-    const tempIds = [];
-    for (const parcela of parcelas) {
-        const tempId = `temp_${Date.now()}_${Math.random()}`;
-        tempIds.push(tempId);
-        contas.push({
-            ...parcela,
-            id: null,
-            tempId,
-            synced: false
-        });
-    }
-
-    // Atualizar UI
-    lastDataHash = JSON.stringify(contas.map(c => c.id || c.tempId));
-    updateAllFilters();
-    updateDashboard();
-    filterContas();
-    closeFormModal();
-
-    showMessage(`${numParcelas} parcelas cadastradas! Sincronizando...`, 'success');
-
-    if (!isOnline) {
-        showMessage('Sistema offline. As parcelas serão sincronizadas quando voltar online.', 'warning');
-        return;
-    }
-
-    // Adicionar à fila
-    for (let i = 0; i < parcelas.length; i++) {
-        addToQueue({
-            tempId: tempIds[i],
-            data: parcelas[i]
-        });
-    }
-
-    processQueue();
-}
-
-function applyUppercaseFields() {
-    const camposMaiusculas = ['documento', 'descricao'];
-
-    camposMaiusculas.forEach(campoId => {
-        const campo = document.getElementById(campoId);
-        if (campo) {
-            campo.addEventListener('input', (e) => {
-                const start = e.target.selectionStart;
-                e.target.value = e.target.value.toUpperCase();
-                e.target.setSelectionRange(start, start);
-            });
-        }
-    });
 }
 
 function generateUUID() {
