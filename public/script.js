@@ -1836,20 +1836,20 @@ function renderContas(lista) {
                         ? `${c.parcela_numero}/${c.parcela_total}` 
                         : '-';
                     
-                    // Indicador de sincronização
                     const syncIndicator = !c.synced && c.tempId 
                         ? '<span style="color: orange; font-size: 0.8em;" title="Sincronizando...">⟳</span> '
                         : '';
                     
                     const isPago = c.status === 'PAGO';
+                    const contaId = c.id || c.tempId;
                     
                     return `
                     <tr class="${isPago ? 'row-pago' : ''}">
                         <td style="text-align: center; padding: 8px;">
                            <button class="check-btn ${isPago ? 'checked' : ''}" 
-        onclick="togglePago('${c.id || c.tempId}')" 
-        title="${isPago ? 'Marcar como pendente' : 'Marcar como pago'}">
-</button>
+                                   onclick="togglePago('${contaId}')" 
+                                   title="${isPago ? 'Marcar como pendente' : 'Marcar como pago'}">
+                           </button>
                         </td>
                         <td>${syncIndicator}${c.descricao}</td>
                         <td><strong>R$ ${parseFloat(c.valor).toFixed(2)}</strong></td>
@@ -1858,11 +1858,11 @@ function renderContas(lista) {
                         <td>${c.banco || '-'}</td>
                         <td style="white-space: nowrap;">${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
                         <td>${getStatusBadge(getStatusDinamico(c))}</td>
-<td class="actions-cell" style="text-align: center;">
-    <button onclick="viewConta('${c.id || c.tempId}')" class="action-btn view">Ver</button>
-    <button onclick="editConta('${c.id || c.tempId}')" class="action-btn edit">Editar</button>
-    <button onclick="deleteConta('${c.id || c.tempId}')" class="action-btn delete">Excluir</button>
-</td>
+                        <td class="actions-cell" style="text-align: center;">
+                            <button onclick="viewConta(&quot;${contaId}&quot;)" class="action-btn view">Ver</button>
+                            <button onclick="editConta(&quot;${contaId}&quot;)" class="action-btn edit">Editar</button>
+                            <button onclick="deleteConta(&quot;${contaId}&quot;)" class="action-btn delete">Excluir</button>
+                        </td>
                     </tr>
                 `}).join('')}
             </tbody>
