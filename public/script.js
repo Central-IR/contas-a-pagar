@@ -518,10 +518,10 @@ window.sincronizarDados = async function() {
 // FORMULÁRIO COM SISTEMA DE OBSERVAÇÕES
 // ============================================
 window.toggleForm = function() {
-    showFormModal(null);
+    window.showFormModal(null);
 };
 
-async function showFormModal(editingId) {
+window.showFormModal = async function(editingId) {
     const isEditing = editingId !== null;
     let conta = null;
     
@@ -1550,7 +1550,7 @@ window.togglePago = async function(id) {
 // EDIÇÃO E EXCLUSÃO
 // ============================================
 window.editConta = function(id) {
-    showFormModal(String(id));
+    window.showFormModal(String(id));
 };
 
 window.deleteConta = async function(id) {
