@@ -637,9 +637,9 @@ window.showFormModal = async function(editingId) {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             if (isEditing) {
-                handleEditSubmit(e);
+                window.handleEditSubmit(e);
             } else {
-                handleCreateSubmit(e);
+                window.handleCreateSubmit(e);
             }
         });
     }
