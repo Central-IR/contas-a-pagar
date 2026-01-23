@@ -1847,7 +1847,7 @@ function renderContas(lista) {
                     <tr class="${isPago ? 'row-pago' : ''}">
                         <td style="text-align: center; padding: 8px;">
                            <button class="check-btn ${isPago ? 'checked' : ''}" 
-                                   onclick="togglePago('${contaId}')" 
+                                   onclick="togglePago(${JSON.stringify(contaId)})" 
                                    title="${isPago ? 'Marcar como pendente' : 'Marcar como pago'}">
                            </button>
                         </td>
@@ -1859,9 +1859,9 @@ function renderContas(lista) {
                         <td style="white-space: nowrap;">${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
                         <td>${getStatusBadge(getStatusDinamico(c))}</td>
                         <td class="actions-cell" style="text-align: center;">
-                            <button onclick='viewConta("${contaId}")' class="action-btn view">Ver</button>
-                            <button onclick='editConta("${contaId}")' class="action-btn edit">Editar</button>
-                            <button onclick='deleteConta("${contaId}")' class="action-btn delete">Excluir</button>
+                            <button onclick="viewConta(${JSON.stringify(contaId)})" class="action-btn view">Ver</button>
+                            <button onclick="editConta(${JSON.stringify(contaId)})" class="action-btn edit">Editar</button>
+                            <button onclick="deleteConta(${JSON.stringify(contaId)})" class="action-btn delete">Excluir</button>
                         </td>
                     </tr>
                 `}).join('')}
