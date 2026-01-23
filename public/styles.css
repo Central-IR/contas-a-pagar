@@ -580,7 +580,7 @@ h2 {
     }
 }
 
-/* PULSE BADGE - BOLINHA PULSANTE NO CARD VENCIDO */
+/* PULSE BADGE - BOLINHA PULSANTE NO CARD VENCIDO - CORRIGIDO */
 .pulse-badge {
     position: absolute;
     top: -8px;
@@ -588,8 +588,8 @@ h2 {
     background: var(--alert-color);
     color: white;
     border-radius: 50%;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -597,6 +597,12 @@ h2 {
     font-weight: 700;
     animation: pulse 2s ease-in-out infinite;
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.pulse-badge svg {
+    stroke: white;
+    width: 16px;
+    height: 16px;
 }
 
 @keyframes pulse {
