@@ -1502,7 +1502,7 @@ function applyUppercaseFields() {
 // ============================================
 window.togglePago = async function(id) {
     const idStr = String(id);
-    const conta = contas.find(c => String(c.id) === idStr);
+    const conta = contas.find(c => String(c.id || c.tempId) === idStr);
     if (!conta) return;
 
     const novoStatus = conta.status === 'PAGO' ? 'PENDENTE' : 'PAGO';
@@ -1557,8 +1557,8 @@ window.deleteConta = async function(id) {
     if (!confirm('Tem certeza que deseja excluir esta conta?')) return;
 
     const idStr = String(id);
-    const deleted = contas.find(c => String(c.id) === idStr);
-    contas = contas.filter(c => String(c.id) !== idStr);
+    const deleted = contas.find(c => String(c.id || c.tempId) === idStr);
+    contas = contas.filter(c => String(c.id || c.tempId) !== idStr);
     updateAllFilters();
     updateDashboard();
     filterContas();
@@ -1595,7 +1595,7 @@ window.deleteConta = async function(id) {
 // ============================================
 window.viewConta = function(id) {
     const idStr = String(id);
-    const conta = contas.find(c => String(c.id) === idStr);
+    const conta = contas.find(c => String(c.id || c.tempId) === idStr);
     
     if (!conta) {
         showMessage('Conta não encontrada!', 'error');
