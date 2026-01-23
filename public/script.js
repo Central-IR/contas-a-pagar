@@ -1015,7 +1015,7 @@ window.generateParcelas = function() {
 // ============================================
 // FUNÇÕES DE SUBMIT - COM MENSAGENS PADRONIZADAS
 // ============================================
-async function handleCreateSubmit(event) {
+window.handleCreateSubmit = async function(event) {
     event.preventDefault();
     
     if (formType === 'parcelado') {
@@ -1023,9 +1023,9 @@ async function handleCreateSubmit(event) {
     } else {
         await salvarContaOtimista();
     }
-}
+};
 
-async function handleEditSubmit(event) {
+window.handleEditSubmit = async function(event) {
     event.preventDefault();
     
     const temParcelas = parcelasDoGrupo.length > 1;
@@ -1036,7 +1036,7 @@ async function handleEditSubmit(event) {
         const editId = document.getElementById('editId').value;
         await editarContaOtimista(editId);
     }
-}
+};
 
 async function salvarContaOtimista() {
     // Validação dos campos obrigatórios
