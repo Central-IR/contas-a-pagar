@@ -591,7 +591,7 @@ async function showFormModal(editingId) {
                 </div>
                 ` : ''}
                 
-                <form id="contaForm" onsubmit="event.preventDefault(); ${isEditing ? 'handleEditSubmit(event)' : 'handleCreateSubmit(event)'}; return false;">
+                <form id="contaForm">
                     <input type="hidden" id="observacoesData" value='${JSON.stringify(observacoesArray)}'>
                     ${isEditing ? `
                         <input type="hidden" id="editId" value="${editingId}">
@@ -630,6 +630,20 @@ async function showFormModal(editingId) {
     if (existingModal) existingModal.remove();
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // ADICIONAR EVENT LISTENER AO FORMULÁRIO
+    const form = document.getElementById('contaForm');
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (isEditing) {
+                handleEditSubmit(e);
+            } else {
+                handleCreateSubmit(e);
+            }
+        });
+    }
+    
     applyUppercaseFields();
 }
 
@@ -1001,7 +1015,7 @@ window.generateParcelas = function() {
 // ============================================
 // FUNÇÕES DE SUBMIT - COM MENSAGENS PADRONIZADAS
 // ============================================
-window.handleCreateSubmit = async function(event) {
+async function handleCreateSubmit(event) {
     event.preventDefault();
     
     if (formType === 'parcelado') {
@@ -1009,9 +1023,9 @@ window.handleCreateSubmit = async function(event) {
     } else {
         await salvarContaOtimista();
     }
-};
+}
 
-window.handleEditSubmit = async function(event) {
+async function handleEditSubmit(event) {
     event.preventDefault();
     
     const temParcelas = parcelasDoGrupo.length > 1;
@@ -1022,7 +1036,7 @@ window.handleEditSubmit = async function(event) {
         const editId = document.getElementById('editId').value;
         await editarContaOtimista(editId);
     }
-};
+}
 
 async function salvarContaOtimista() {
     // Validação dos campos obrigatórios
@@ -1464,7 +1478,6 @@ window.closeFormModal = function() {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
         setTimeout(() => {
             modal.remove();
-            showMessage('Registro cancelado', 'error');
         }, 200);
     }
 };
