@@ -46,7 +46,8 @@
                         <div class="stat-label">Pagos</div>
                     </div>
                 </div>
-                <div class="stat-card stat-card-danger" id="cardVencido" onclick="showVencidoModal()" style="cursor: pointer;" title="Clique para ver detalhes">
+                <div class="stat-card stat-card-danger" id="cardVencido" onclick="showVencidoModal()" style="cursor: pointer; position: relative;" title="Clique para ver detalhes">
+                    <span class="pulse-badge" id="pulseBadge" style="display: none;"></span>
                     <div class="stat-icon stat-icon-danger">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <circle cx="12" cy="12" r="10"></circle>
