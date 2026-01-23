@@ -591,7 +591,7 @@ async function showFormModal(editingId) {
                 </div>
                 ` : ''}
                 
-                <form id="contaForm" onsubmit="${isEditing ? 'handleEditSubmit(event)' : 'handleCreateSubmit(event)'}">
+                <form id="contaForm" onsubmit="event.preventDefault(); ${isEditing ? 'handleEditSubmit(event)' : 'handleCreateSubmit(event)'}; return false;">
                     <input type="hidden" id="observacoesData" value='${JSON.stringify(observacoesArray)}'>
                     ${isEditing ? `
                         <input type="hidden" id="editId" value="${editingId}">
