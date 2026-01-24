@@ -155,19 +155,21 @@ function verificarAutenticacao() {
             
             if (hoursElapsed > 24) {
                 console.log('⏰ Sessão expirada por tempo (>24h)');
-                limparSessaoERedirecionarParaPortal();
-                return;
+                // NÃO redirecionar imediatamente, apenas avisar
+                console.warn('⚠️ Sessão expirada - Funcionando em modo offline');
+                sessionToken = null;
+            } else {
+                console.log(`✅ Sessão válida (${hoursElapsed.toFixed(1)}h desde o login)`);
             }
-            console.log(`✅ Sessão válida (${hoursElapsed.toFixed(1)}h desde o login)`);
         }
     }
 
     if (!sessionToken) {
-        console.log('❌ Nenhum token encontrado');
-        mostrarTelaAcessoNegado();
-        return;
+        console.log('⚠️ Sem token - Funcionando em modo offline');
+        // Não bloquear, apenas continuar sem autenticação
     }
 
+    // SEMPRE inicializar o app, mesmo sem token
     inicializarApp();
 }
 
@@ -200,12 +202,15 @@ function tratarErroAutenticacao(response) {
         if (tentativasReconexao < MAX_TENTATIVAS) {
             console.log(`🔄 Tentativa ${tentativasReconexao} de ${MAX_TENTATIVAS} - aguardando 2s...`);
             setTimeout(() => {
-                checkServerStatus();
+                checkServerStatus().catch(err => console.warn('Erro na tentativa de reconexão:', err));
             }, 2000);
             return true;
         } else {
-            console.log('❌ Máximo de tentativas atingido');
-            limparSessaoERedirecionarParaPortal();
+            console.log('❌ Máximo de tentativas atingido - Continuando em modo offline');
+            isOnline = false;
+            sessionToken = null;
+            // NÃO redirecionar automaticamente, apenas avisar
+            showMessage('Sessão expirada - Modo offline ativado', 'warning');
             return true;
         }
     }
@@ -216,15 +221,36 @@ function inicializarApp() {
     console.log('🚀 Iniciando aplicação...');
     tentativasReconexao = 0;
     updateDisplay();
-    checkServerStatus();
-    setInterval(checkServerStatus, 15000);
-    startPolling();
+    
+    // Tentar conectar ao servidor de forma não-bloqueante
+    checkServerStatus().catch(err => {
+        console.warn('⚠️ Erro ao verificar servidor:', err);
+        isOnline = false;
+        updateConnectionStatus();
+    });
+    
+    // Configurar polling apenas se houver token
+    if (sessionToken) {
+        setInterval(() => {
+            checkServerStatus().catch(err => console.warn('Erro no polling:', err));
+        }, 15000);
+        startPolling();
+    } else {
+        console.log('ℹ️ Modo offline - Polling desabilitado');
+    }
 }
 
 // ============================================
 // CONEXÃO E STATUS
 // ============================================
 async function checkServerStatus() {
+    // Se não houver token, marcar como offline e retornar
+    if (!sessionToken) {
+        isOnline = false;
+        updateConnectionStatus();
+        return false;
+    }
+    
     try {
         const response = await fetch(`${API_URL}/contas`, {
             method: 'GET',
@@ -232,7 +258,8 @@ async function checkServerStatus() {
                 'X-Session-Token': sessionToken,
                 'Accept': 'application/json'
             },
-            mode: 'cors'
+            mode: 'cors',
+            signal: AbortSignal.timeout(5000) // Timeout de 5 segundos
         });
 
         if (tratarErroAutenticacao(response)) return false;
@@ -254,7 +281,7 @@ async function checkServerStatus() {
         updateConnectionStatus();
         return isOnline;
     } catch (error) {
-        console.error('❌ Erro ao verificar servidor:', error.message);
+        console.warn('⚠️ Erro ao verificar servidor:', error.message);
         isOnline = false;
         updateConnectionStatus();
         return false;
