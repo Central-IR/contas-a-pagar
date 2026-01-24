@@ -491,10 +491,10 @@ window.sincronizarDados = async function() {
 // ============================================
 window.toggleForm = function() {
     console.log('🔘 toggleForm chamado');
-    showFormModal(null);
+    window.showFormModal(null);
 };
 
-async function showFormModal(editingId = null) {
+window.showFormModal = async function(editingId = null) {
     console.log('📝 showFormModal chamado com editingId:', editingId);
     
     const isEditing = editingId !== null;
@@ -1465,7 +1465,7 @@ window.togglePago = async function(id) {
 // ============================================
 window.editConta = function(id) {
     console.log('✏️ editConta chamado com id:', id);
-    showFormModal(String(id));
+    window.showFormModal(String(id));
 };
 
 window.deleteConta = async function(id) {
