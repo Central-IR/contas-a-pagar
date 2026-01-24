@@ -1921,3 +1921,76 @@ function generateUUID() {
         return v.toString(16);
     });
 }
+// ============================================
+// COLE ESTE CÓDIGO NO FINAL DO SEU script.js
+// (DEPOIS DA ÚLTIMA LINHA QUE VOCÊ TEM)
+// ============================================
+
+window.generateParcelas = function() {
+    const numParcelasInput = document.getElementById('numParcelas');
+    const valorTotalInput = document.getElementById('valorTotal');
+    const dataInicioInput = document.getElementById('dataInicio');
+    const container = document.getElementById('parcelasContainer');
+
+    const numParcelas = parseInt(numParcelasInput?.value);
+    const valorTotal = parseFloat(valorTotalInput?.value);
+    const dataInicio = dataInicioInput?.value;
+
+    if (!numParcelas || !valorTotal || !dataInicio || numParcelas < 2) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const valorParcela = (valorTotal / numParcelas).toFixed(2);
+    const dataBase = new Date(dataInicio + 'T00:00:00');
+
+    let html = '<div class="parcelas-preview"><h4>Parcelas Geradas:</h4>';
+
+    for (let i = 0; i < numParcelas; i++) {
+        const dataVenc = new Date(dataBase);
+        dataVenc.setMonth(dataVenc.getMonth() + i);
+        const dataFormatada = dataVenc.toISOString().split('T')[0];
+
+        html += `
+            <div class="parcela-item">
+                <span class="parcela-numero">${i + 1}ª Parcela</span>
+                <span class="parcela-data">${formatDate(dataFormatada)}</span>
+                <span class="parcela-valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+};
+
+window.handleCreateSubmit = async function(event) {
+    console.log('📤 handleCreateSubmit chamado');
+    event.preventDefault();
+    
+    if (formType === 'parcelado') {
+        await salvarContaParcelada();
+    } else {
+        await salvarContaOtimista();
+    }
+};
+
+window.handleEditSubmit = async function(event) {
+    console.log('📤 handleEditSubmit chamado');
+    event.preventDefault();
+    
+    const temParcelas = parcelasDoGrupo.length > 1;
+    
+    if (temParcelas) {
+        await handleEditSubmitParcelas();
+    } else {
+        const editId = document.getElementById('editId').value;
+        await editarContaOtimista(editId);
+    }
+};
+
+console.log('✅ Funções adicionadas com sucesso!');
+console.log('✅ toggleForm:', typeof window.toggleForm);
+console.log('✅ showFormModal:', typeof window.showFormModal);
+console.log('✅ handleCreateSubmit:', typeof window.handleCreateSubmit);
+console.log('✅ handleEditSubmit:', typeof window.handleEditSubmit);
