@@ -119,7 +119,6 @@ function updateDisplay() {
     filterContas();
 }
 
-// Expor funções globalmente
 window.changeMonth = function(direction) {
     currentMonth.setMonth(currentMonth.getMonth() + direction);
     updateDisplay();
@@ -134,7 +133,7 @@ window.nextMonth = function() {
 };
 
 // ============================================
-// AUTENTICAÇÃO CORRIGIDA
+// AUTENTICAÇÃO
 // ============================================
 function verificarAutenticacao() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -169,27 +168,6 @@ function verificarAutenticacao() {
     }
 
     inicializarApp();
-}
-
-function limparSessaoERedirecionarParaPortal() {
-    sessionStorage.removeItem('contasPagarSession');
-    sessionStorage.removeItem('contasPagarSessionTime');
-    tentativasReconexao = 0;
-    console.log('🔄 Redirecionando para o portal...');
-    setTimeout(() => {
-        window.location.href = PORTAL_URL;
-    }, 2000);
-    mostrarTelaAcessoNegado('Sua sessão expirou. Redirecionando...');
-}
-
-function mostrarTelaAcessoNegado(mensagem = 'NÃO AUTORIZADO') {
-    document.body.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg-primary); color: var(--text-primary); text-align: center; padding: 2rem;">
-            <h1 style="font-size: 2.2rem; margin-bottom: 1rem;">${mensagem}</h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Somente usuários autenticados podem acessar esta área.</p>
-            <a href="${PORTAL_URL}" style="display: inline-block; background: var(--btn-register); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">Ir para o Portal</a>
-        </div>
-    `;
 }
 
 function tratarErroAutenticacao(response) {
@@ -511,7 +489,7 @@ window.sincronizarDados = async function() {
 };
 
 // ============================================
-// FORMULÁRIO COM SISTEMA DE OBSERVAÇÕES
+// FORMULÁRIO
 // ============================================
 window.toggleForm = function() {
     console.log('🔘 toggleForm chamado');
@@ -519,13 +497,16 @@ window.toggleForm = function() {
 };
 
 window.showFormModal = async function(editingId = null) {
-    console.log('📝 showFormModal chamado com editingId:', editingId);
+    console.log('📝 showFormModal chamado com editingId:', editingId, 'tipo:', typeof editingId);
     
-    const isEditing = editingId !== null;
+    const isEditing = editingId !== null && editingId !== undefined && editingId !== 'null' && editingId !== '';
     let conta = null;
     
     if (isEditing) {
-        conta = contas.find(c => String(c.id) === String(editingId));
+        console.log('🔍 Procurando conta com ID:', editingId);
+        conta = contas.find(c => String(c.id) === String(editingId) || String(c.tempId) === String(editingId));
+        console.log('🔍 Conta encontrada:', conta ? 'SIM' : 'NÃO');
+        
         if (!conta) {
             showMessage('Conta não encontrada!', 'error');
             return;
@@ -843,7 +824,6 @@ function renderEditFormComParcelas(conta) {
 // FUNÇÕES DE OBSERVAÇÕES
 // ============================================
 window.switchFormTab = function(index) {
-    console.log('🔄 switchFormTab chamado com index:', index);
     document.querySelectorAll('#formModal .tab-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
     });
@@ -854,7 +834,6 @@ window.switchFormTab = function(index) {
 };
 
 window.adicionarObservacao = function() {
-    console.log('➕ adicionarObservacao chamado');
     const textarea = document.getElementById('novaObservacao');
     const texto = textarea.value.trim();
     
@@ -879,7 +858,6 @@ window.adicionarObservacao = function() {
 };
 
 window.removerObservacao = function(index) {
-    console.log('➖ removerObservacao chamado com index:', index);
     const observacoesDataField = document.getElementById('observacoesData');
     let observacoes = JSON.parse(observacoesDataField.value || '[]');
     
@@ -914,7 +892,6 @@ function atualizarListaObservacoes() {
 // FUNÇÕES DO FORMULÁRIO
 // ============================================
 window.selectFormType = function(type) {
-    console.log('🔀 selectFormType chamado com type:', type);
     formType = type;
     
     const buttons = document.querySelectorAll('.form-type-btn');
@@ -944,7 +921,6 @@ window.selectFormType = function(type) {
 };
 
 window.generateParcelas = function() {
-    console.log('🔢 generateParcelas chamado');
     const numParcelasInput = document.getElementById('numParcelas');
     const valorTotalInput = document.getElementById('valorTotal');
     const dataInicioInput = document.getElementById('dataInicio');
@@ -986,7 +962,6 @@ window.generateParcelas = function() {
 // HANDLER DE SUBMIT DO FORMULÁRIO
 // ============================================
 window.handleFormSubmit = function(event, isEditing) {
-    console.log('📤 handleFormSubmit chamado - isEditing:', isEditing);
     event.preventDefault();
     
     if (isEditing) {
@@ -999,7 +974,6 @@ window.handleFormSubmit = function(event, isEditing) {
 };
 
 async function handleCreateSubmit(event) {
-    console.log('📤 handleCreateSubmit chamado');
     event.preventDefault();
     
     if (formType === 'parcelado') {
@@ -1010,7 +984,6 @@ async function handleCreateSubmit(event) {
 }
 
 async function handleEditSubmit(event) {
-    console.log('📤 handleEditSubmit chamado');
     event.preventDefault();
     
     const temParcelas = parcelasDoGrupo.length > 1;
@@ -1417,7 +1390,6 @@ async function processEditQueue(atualizacoes, backupOriginal, totalParcelas) {
 }
 
 window.closeFormModal = function() {
-    console.log('❌ closeFormModal chamado');
     const modal = document.getElementById('formModal');
     if (modal) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -1492,11 +1464,13 @@ window.togglePago = async function(id) {
 };
 
 // ============================================
-// EDIÇÃO E EXCLUSÃO
+// EDIÇÃO E EXCLUSÃO - CORRIGIDO COM ASPAS DUPLAS
 // ============================================
 window.editConta = function(id) {
-    console.log('✏️ editConta chamado com id:', id);
-    window.showFormModal(String(id));
+    console.log('✏️ editConta chamado com id:', id, 'tipo:', typeof id);
+    // Garantir que o ID é passado corretamente
+    const idString = String(id);
+    window.showFormModal(idString);
 };
 
 window.deleteConta = async function(id) {
@@ -1623,7 +1597,6 @@ window.viewConta = function(id) {
 };
 
 window.closeViewModal = function() {
-    console.log('❌ closeViewModal chamado');
     const modal = document.getElementById('viewModal');
     if (modal) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -1767,7 +1740,7 @@ function filterContas() {
 }
 
 // ============================================
-// RENDERIZAÇÃO - CORRIGIDA (SEM JSON.stringify)
+// RENDERIZAÇÃO - TOTALMENTE CORRIGIDA COM ESCAPE DE ASPAS
 // ============================================
 function renderContas(lista) {
     console.log('🎨 renderContas chamado com', lista?.length || 0, 'contas');
@@ -1811,11 +1784,12 @@ function renderContas(lista) {
                     const isPago = c.status === 'PAGO';
                     const contaId = c.id || c.tempId;
                     
+                    // CRÍTICO: Usar aspas duplas no HTML e passar o ID como string
                     return `
                     <tr class="${isPago ? 'row-pago' : ''}">
                         <td style="text-align: center; padding: 8px;">
                            <button class="check-btn ${isPago ? 'checked' : ''}" 
-                                   onclick="window.togglePago('${contaId}')" 
+                                   onclick="window.togglePago(&quot;${contaId}&quot;)" 
                                    title="${isPago ? 'Marcar como pendente' : 'Marcar como pago'}">
                            </button>
                         </td>
@@ -1827,9 +1801,9 @@ function renderContas(lista) {
                         <td style="white-space: nowrap;">${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
                         <td>${getStatusBadge(getStatusDinamico(c))}</td>
                         <td class="actions-cell" style="text-align: center;">
-                            <button onclick="window.viewConta('${contaId}')" class="action-btn view">Ver</button>
-                            <button onclick="window.editConta('${contaId}')" class="action-btn edit">Editar</button>
-                            <button onclick="window.deleteConta('${contaId}')" class="action-btn delete">Excluir</button>
+                            <button onclick="window.viewConta(&quot;${contaId}&quot;)" class="action-btn view">Ver</button>
+                            <button onclick="window.editConta(&quot;${contaId}&quot;)" class="action-btn edit">Editar</button>
+                            <button onclick="window.deleteConta(&quot;${contaId}&quot;)" class="action-btn delete">Excluir</button>
                         </td>
                     </tr>
                 `}).join('')}
