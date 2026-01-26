@@ -104,6 +104,42 @@ console.log('🚀 Contas a Pagar iniciada');
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('📄 DOM carregado');
+    
+    // ============================================
+    // EVENT DELEGATION PARA BOTÕES DA TABELA
+    // ============================================
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        
+        console.log(`🎯 Event delegation - Ação: ${action}, ID: ${id}`);
+        
+        if (!id) {
+            console.error('❌ ID não encontrado no botão');
+            return;
+        }
+        
+        switch(action) {
+            case 'view':
+                window.viewConta(id);
+                break;
+            case 'edit':
+                window.editConta(id);
+                break;
+            case 'delete':
+                window.deleteConta(id);
+                break;
+            case 'toggle':
+                window.togglePago(id);
+                break;
+            default:
+                console.warn('Ação desconhecida:', action);
+        }
+    });
+    
     verificarAutenticacao();
 });
 
@@ -1464,13 +1500,11 @@ window.togglePago = async function(id) {
 };
 
 // ============================================
-// EDIÇÃO E EXCLUSÃO - CORRIGIDO COM ASPAS DUPLAS
+// EDIÇÃO E EXCLUSÃO
 // ============================================
 window.editConta = function(id) {
     console.log('✏️ editConta chamado com id:', id, 'tipo:', typeof id);
-    // Garantir que o ID é passado corretamente
-    const idString = String(id);
-    window.showFormModal(idString);
+    window.showFormModal(id);
 };
 
 window.deleteConta = async function(id) {
@@ -1740,7 +1774,7 @@ function filterContas() {
 }
 
 // ============================================
-// RENDERIZAÇÃO - TOTALMENTE CORRIGIDA COM ESCAPE DE ASPAS
+// RENDERIZAÇÃO - COM EVENT DELEGATION (CORREÇÃO CRÍTICA)
 // ============================================
 function renderContas(lista) {
     console.log('🎨 renderContas chamado com', lista?.length || 0, 'contas');
@@ -1784,12 +1818,12 @@ function renderContas(lista) {
                     const isPago = c.status === 'PAGO';
                     const contaId = c.id || c.tempId;
                     
-                    // CRÍTICO: Usar aspas duplas no HTML e passar o ID como string
                     return `
                     <tr class="${isPago ? 'row-pago' : ''}">
                         <td style="text-align: center; padding: 8px;">
                            <button class="check-btn ${isPago ? 'checked' : ''}" 
-                                   onclick="window.togglePago(&quot;${contaId}&quot;)" 
+                                   data-action="toggle" 
+                                   data-id="${contaId}"
                                    title="${isPago ? 'Marcar como pendente' : 'Marcar como pago'}">
                            </button>
                         </td>
@@ -1801,9 +1835,9 @@ function renderContas(lista) {
                         <td style="white-space: nowrap;">${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
                         <td>${getStatusBadge(getStatusDinamico(c))}</td>
                         <td class="actions-cell" style="text-align: center;">
-                            <button onclick="window.viewConta(&quot;${contaId}&quot;)" class="action-btn view">Ver</button>
-                            <button onclick="window.editConta(&quot;${contaId}&quot;)" class="action-btn edit">Editar</button>
-                            <button onclick="window.deleteConta(&quot;${contaId}&quot;)" class="action-btn delete">Excluir</button>
+                            <button class="action-btn view" data-action="view" data-id="${contaId}">Ver</button>
+                            <button class="action-btn edit" data-action="edit" data-id="${contaId}">Editar</button>
+                            <button class="action-btn delete" data-action="delete" data-id="${contaId}">Excluir</button>
                         </td>
                     </tr>
                 `}).join('')}
