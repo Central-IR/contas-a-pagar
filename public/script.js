@@ -1434,13 +1434,15 @@ async function processEditQueue(atualizacoes, backupOriginal, totalParcelas) {
 
 window.closeFormModal = function() {
     const modal = document.getElementById('formModal');
-    if (modal) {
-        modal.style.animation = 'fadeOut 0.2s ease forwards';
-        setTimeout(() => {
-            modal.remove();
-        }, 200);
-    }
+    if (!modal) return;
+
+    modal.classList.remove('show');
+
+    setTimeout(() => {
+        modal.remove();
+    }, 200);
 };
+
 
 function applyUppercaseFields() {
     const camposMaiusculas = ['documento', 'descricao'];
