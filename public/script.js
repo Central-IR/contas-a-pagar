@@ -117,7 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log(`🎯 Event delegation - Ação: ${action}, ID: ${id}`);
         
-        if (!id) {
+        // Validação de ID apenas para ações que precisam
+        if (!id && action !== 'new-conta') {
             console.error('❌ ID não encontrado no botão');
             return;
         }
@@ -134,6 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'toggle':
                 window.togglePago(id);
+                break;
+            case 'new-conta':
+                window.showFormModal(null);
                 break;
             default:
                 console.warn('Ação desconhecida:', action);
