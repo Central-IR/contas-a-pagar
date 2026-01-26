@@ -1637,7 +1637,9 @@ window.viewConta = function(id) {
             </div>
         </div>
     `;
-    document.body.insertAdjacentHTML('beforeend', modal);
+document.body.insertAdjacentHTML('beforeend', modal);
+document.getElementById('viewModal').style.display = 'flex';
+
 };
 
 window.closeViewModal = function() {
