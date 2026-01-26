@@ -24,7 +24,7 @@
                         <span class="status-dot"></span>
                     </div>
                 </div>
-                <button onclick="toggleForm()" class="btn-new-order-header">
+                <button onclick="window.showFormModal(null)" class="btn-new-order-header">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -46,7 +46,7 @@
                         <div class="stat-label">Pagos</div>
                     </div>
                 </div>
-                <div class="stat-card stat-card-danger" id="cardVencido" onclick="showVencidoModal()" style="cursor: pointer; position: relative;" title="Clique para ver detalhes">
+                <div class="stat-card stat-card-danger" id="cardVencido" onclick="window.showVencidoModal()" style="cursor: pointer; position: relative;" title="Clique para ver detalhes">
                     <span class="pulse-badge" id="pulseBadge" style="display: none;"></span>
                     <div class="stat-icon stat-icon-danger">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -121,7 +121,7 @@
                             </svg>
                         </div>
                         <div class="month-navigation-inline">
-                            <button onclick="changeMonth(-1)" class="month-nav-arrow" title="Mês anterior">
+                            <button onclick="window.changeMonth(-1)" class="month-nav-arrow" title="Mês anterior">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="15 18 9 12 15 6"></polyline>
                                 </svg>
@@ -129,7 +129,7 @@
                             <div class="month-display-inline">
                                 <span id="currentMonth">Carregando...</span>
                             </div>
-                            <button onclick="changeMonth(1)" class="month-nav-arrow" title="Próximo mês">
+                            <button onclick="window.changeMonth(1)" class="month-nav-arrow" title="Próximo mês">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="9 18 15 12 9 6"></polyline>
                                 </svg>
@@ -137,7 +137,7 @@
                         </div>
                     </div>
 
-                    <button class="calendar-btn" onclick="toggleCalendar()" title="Selecionar mês">
+                    <button class="calendar-btn" onclick="window.toggleCalendar()" title="Selecionar mês">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                             <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -145,7 +145,7 @@
                             <line x1="3" y1="10" x2="21" y2="10"></line>
                         </svg>
                     </button>
-                    <button class="calendar-btn" onclick="sincronizarDados()" title="Sincronizar">
+                    <button class="calendar-btn" onclick="window.sincronizarDados()" title="Sincronizar">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <polyline points="23 4 23 10 17 10"></polyline>
                             <polyline points="1 20 1 14 7 14"></polyline>
@@ -159,13 +159,13 @@
             <div class="calendar-modal" id="calendarModal">
                 <div class="calendar-content">
                     <div class="calendar-header">
-                        <button onclick="changeCalendarYear(-1)" class="calendar-year-nav">
+                        <button onclick="window.changeCalendarYear(-1)" class="calendar-year-nav">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="15 18 9 12 15 6"></polyline>
                             </svg>
                         </button>
                         <h3 id="calendarYear">2026</h3>
-                        <button onclick="changeCalendarYear(1)" class="calendar-year-nav">
+                        <button onclick="window.changeCalendarYear(1)" class="calendar-year-nav">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="9 18 15 12 9 6"></polyline>
                             </svg>
@@ -191,13 +191,13 @@
                     <line x1="12" y1="9" x2="12" y2="13"></line>
                     <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
-                <button class="close-modal" onclick="closeVencidoModal()">✕</button>
+                <button class="close-modal" onclick="window.closeVencidoModal()">✕</button>
             </div>
             
             <div class="modal-body" id="vencidoModalBody"></div>
 
             <div class="modal-actions-alert">
-                <button type="button" onclick="closeVencidoModal()" class="btn-close-red">Fechar</button>
+                <button type="button" onclick="window.closeVencidoModal()" class="btn-close-red">Fechar</button>
             </div>
         </div>
     </div>
