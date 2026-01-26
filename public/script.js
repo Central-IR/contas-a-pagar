@@ -1442,6 +1442,7 @@ window.closeFormModal = function() {
         modal.remove();
     }, 200);
 };
+}
 
 
 function applyUppercaseFields() {
