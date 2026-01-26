@@ -119,17 +119,18 @@ function updateDisplay() {
     filterContas();
 }
 
+// Expor funções globalmente
 window.changeMonth = function(direction) {
     currentMonth.setMonth(currentMonth.getMonth() + direction);
     updateDisplay();
 };
 
 window.previousMonth = function() {
-    changeMonth(-1);
+    window.changeMonth(-1);
 };
 
 window.nextMonth = function() {
-    changeMonth(1);
+    window.changeMonth(1);
 };
 
 // ============================================
@@ -155,7 +156,6 @@ function verificarAutenticacao() {
             
             if (hoursElapsed > 24) {
                 console.log('⏰ Sessão expirada por tempo (>24h)');
-                // NÃO redirecionar imediatamente, apenas avisar
                 console.warn('⚠️ Sessão expirada - Funcionando em modo offline');
                 sessionToken = null;
             } else {
@@ -166,10 +166,8 @@ function verificarAutenticacao() {
 
     if (!sessionToken) {
         console.log('⚠️ Sem token - Funcionando em modo offline');
-        // Não bloquear, apenas continuar sem autenticação
     }
 
-    // SEMPRE inicializar o app, mesmo sem token
     inicializarApp();
 }
 
@@ -209,7 +207,6 @@ function tratarErroAutenticacao(response) {
             console.log('❌ Máximo de tentativas atingido - Continuando em modo offline');
             isOnline = false;
             sessionToken = null;
-            // NÃO redirecionar automaticamente, apenas avisar
             showMessage('Sessão expirada - Modo offline ativado', 'warning');
             return true;
         }
@@ -222,14 +219,12 @@ function inicializarApp() {
     tentativasReconexao = 0;
     updateDisplay();
     
-    // Tentar conectar ao servidor de forma não-bloqueante
     checkServerStatus().catch(err => {
         console.warn('⚠️ Erro ao verificar servidor:', err);
         isOnline = false;
         updateConnectionStatus();
     });
     
-    // Configurar polling apenas se houver token
     if (sessionToken) {
         setInterval(() => {
             checkServerStatus().catch(err => console.warn('Erro no polling:', err));
@@ -244,7 +239,6 @@ function inicializarApp() {
 // CONEXÃO E STATUS
 // ============================================
 async function checkServerStatus() {
-    // Se não houver token, marcar como offline e retornar
     if (!sessionToken) {
         isOnline = false;
         updateConnectionStatus();
@@ -259,7 +253,7 @@ async function checkServerStatus() {
                 'Accept': 'application/json'
             },
             mode: 'cors',
-            signal: AbortSignal.timeout(5000) // Timeout de 5 segundos
+            signal: AbortSignal.timeout(5000)
         });
 
         if (tratarErroAutenticacao(response)) return false;
@@ -419,6 +413,7 @@ function updateDashboard() {
 // MODAL DE VENCIDOS
 // ============================================
 window.showVencidoModal = function() {
+    console.log('🔔 showVencidoModal chamado');
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
@@ -494,6 +489,7 @@ window.showVencidoModal = function() {
 };
 
 window.closeVencidoModal = function() {
+    console.log('❌ closeVencidoModal chamado');
     const modal = document.getElementById('vencidoModal');
     if (modal) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -508,6 +504,7 @@ window.closeVencidoModal = function() {
 // SINCRONIZAÇÃO
 // ============================================
 window.sincronizarDados = async function() {
+    console.log('🔄 sincronizarDados chamado');
     showMessage('Sincronizando...', 'info');
     await loadContas();
     showMessage('Dados sincronizados', 'success');
@@ -567,19 +564,19 @@ window.showFormModal = async function(editingId = null) {
     const modalHTML = `
         <div class="modal-overlay" id="formModal">
             <div class="modal-content modal-large">
-                <button class="modal-close-x" onclick="closeFormModal()" title="Fechar">✕</button>
+                <button class="modal-close-x" onclick="window.closeFormModal()" title="Fechar">✕</button>
                 <div class="modal-header">
                     <h3 class="modal-title">${isEditing ? 'Editar Conta' : 'Nova Conta'}</h3>
                 </div>
                 
                 ${!isEditing ? `
                 <div class="form-type-selector">
-                    <button type="button" class="form-type-btn active" onclick="selectFormType('simple')">Cadastro Simples</button>
-                    <button type="button" class="form-type-btn" onclick="selectFormType('parcelado')">Cadastro Parcelado</button>
+                    <button type="button" class="form-type-btn active" onclick="window.selectFormType('simple')">Cadastro Simples</button>
+                    <button type="button" class="form-type-btn" onclick="window.selectFormType('parcelado')">Cadastro Parcelado</button>
                 </div>
                 ` : ''}
                 
-                <form id="contaForm" onsubmit="handleFormSubmit(event, ${isEditing})">
+                <form id="contaForm" onsubmit="window.handleFormSubmit(event, ${isEditing})">
                     <input type="hidden" id="observacoesData" value='${JSON.stringify(observacoesArray)}'>
                     ${isEditing ? `
                         <input type="hidden" id="editId" value="${editingId}">
@@ -589,15 +586,15 @@ window.showFormModal = async function(editingId = null) {
                     <div class="tabs-container">
                         <div class="tabs-nav">
                             ${isEditing && temParcelas ? `
-                                <button type="button" class="tab-btn active" onclick="switchFormTab(0)">Dados Gerais</button>
+                                <button type="button" class="tab-btn active" onclick="window.switchFormTab(0)">Dados Gerais</button>
                                 ${parcelasDoGrupo.map((p, idx) => 
-                                    `<button type="button" class="tab-btn" onclick="switchFormTab(${idx + 1})">${p.parcela_numero}ª Parcela</button>`
+                                    `<button type="button" class="tab-btn" onclick="window.switchFormTab(${idx + 1})">${p.parcela_numero}ª Parcela</button>`
                                 ).join('')}
-                                <button type="button" class="tab-btn" onclick="switchFormTab(${parcelasDoGrupo.length + 1})">Observações</button>
+                                <button type="button" class="tab-btn" onclick="window.switchFormTab(${parcelasDoGrupo.length + 1})">Observações</button>
                             ` : `
-                                <button type="button" class="tab-btn active" onclick="switchFormTab(0)">Dados</button>
-                                <button type="button" class="tab-btn" onclick="switchFormTab(1)">Pagamento</button>
-                                <button type="button" class="tab-btn" onclick="switchFormTab(2)">Observações</button>
+                                <button type="button" class="tab-btn active" onclick="window.switchFormTab(0)">Dados</button>
+                                <button type="button" class="tab-btn" onclick="window.switchFormTab(1)">Pagamento</button>
+                                <button type="button" class="tab-btn" onclick="window.switchFormTab(2)">Observações</button>
                             `}
                         </div>
 
@@ -606,7 +603,7 @@ window.showFormModal = async function(editingId = null) {
 
                     <div class="modal-actions">
                         <button type="submit" class="save">${isEditing ? 'Atualizar' : 'Salvar'}</button>
-                        <button type="button" class="secondary" onclick="closeFormModal()">Cancelar</button>
+                        <button type="button" class="secondary" onclick="window.closeFormModal()">Cancelar</button>
                     </div>
                 </form>
             </div>
@@ -629,7 +626,7 @@ function renderEditFormSimples(conta, isEditing) {
             <div class="observacao-item" data-index="${idx}">
                 <div class="observacao-header">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">✕</button>
+                    <button type="button" class="btn-remove-obs" onclick="window.removerObservacao(${idx})" title="Remover">✕</button>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
             </div>
@@ -669,17 +666,17 @@ function renderEditFormSimples(conta, isEditing) {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="numParcelas">Número de Parcelas *</label>
-                            <input type="number" id="numParcelas" min="2" max="360" onchange="generateParcelas()">
+                            <input type="number" id="numParcelas" min="2" max="360" onchange="window.generateParcelas()">
                         </div>
                         
                         <div class="form-group">
                             <label for="valorTotal">Valor Total (R$) *</label>
-                            <input type="number" id="valorTotal" step="0.01" min="0" onchange="generateParcelas()">
+                            <input type="number" id="valorTotal" step="0.01" min="0" onchange="window.generateParcelas()">
                         </div>
                         
                         <div class="form-group">
                             <label for="dataInicio">Data Início *</label>
-                            <input type="date" id="dataInicio" onchange="generateParcelas()">
+                            <input type="date" id="dataInicio" onchange="window.generateParcelas()">
                         </div>
                     </div>
                     
@@ -730,7 +727,7 @@ function renderEditFormSimples(conta, isEditing) {
                 <div class="nova-observacao">
                     <label for="novaObservacao">Nova Observação</label>
                     <textarea id="novaObservacao" placeholder="Digite sua observação aqui..." rows="3"></textarea>
-                    <button type="button" class="btn-add-obs" onclick="adicionarObservacao()">
+                    <button type="button" class="btn-add-obs" onclick="window.adicionarObservacao()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -749,7 +746,7 @@ function renderEditFormComParcelas(conta) {
             <div class="observacao-item" data-index="${idx}">
                 <div class="observacao-header">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">✕</button>
+                    <button type="button" class="btn-remove-obs" onclick="window.removerObservacao(${idx})" title="Remover">✕</button>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
             </div>
@@ -829,7 +826,7 @@ function renderEditFormComParcelas(conta) {
                 <div class="nova-observacao">
                     <label for="novaObservacao">Nova Observação</label>
                     <textarea id="novaObservacao" placeholder="Digite sua observação aqui..." rows="3"></textarea>
-                    <button type="button" class="btn-add-obs" onclick="adicionarObservacao()">
+                    <button type="button" class="btn-add-obs" onclick="window.adicionarObservacao()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -846,6 +843,7 @@ function renderEditFormComParcelas(conta) {
 // FUNÇÕES DE OBSERVAÇÕES
 // ============================================
 window.switchFormTab = function(index) {
+    console.log('🔄 switchFormTab chamado com index:', index);
     document.querySelectorAll('#formModal .tab-btn').forEach((btn, i) => {
         btn.classList.toggle('active', i === index);
     });
@@ -856,6 +854,7 @@ window.switchFormTab = function(index) {
 };
 
 window.adicionarObservacao = function() {
+    console.log('➕ adicionarObservacao chamado');
     const textarea = document.getElementById('novaObservacao');
     const texto = textarea.value.trim();
     
@@ -880,6 +879,7 @@ window.adicionarObservacao = function() {
 };
 
 window.removerObservacao = function(index) {
+    console.log('➖ removerObservacao chamado com index:', index);
     const observacoesDataField = document.getElementById('observacoesData');
     let observacoes = JSON.parse(observacoesDataField.value || '[]');
     
@@ -902,7 +902,7 @@ function atualizarListaObservacoes() {
             <div class="observacao-item" data-index="${idx}">
                 <div class="observacao-header">
                     <span class="observacao-data">${new Date(obs.timestamp).toLocaleString('pt-BR')}</span>
-                    <button type="button" class="btn-remove-obs" onclick="removerObservacao(${idx})" title="Remover">✕</button>
+                    <button type="button" class="btn-remove-obs" onclick="window.removerObservacao(${idx})" title="Remover">✕</button>
                 </div>
                 <p class="observacao-texto">${obs.texto}</p>
             </div>
@@ -914,6 +914,7 @@ function atualizarListaObservacoes() {
 // FUNÇÕES DO FORMULÁRIO
 // ============================================
 window.selectFormType = function(type) {
+    console.log('🔀 selectFormType chamado com type:', type);
     formType = type;
     
     const buttons = document.querySelectorAll('.form-type-btn');
@@ -943,6 +944,7 @@ window.selectFormType = function(type) {
 };
 
 window.generateParcelas = function() {
+    console.log('🔢 generateParcelas chamado');
     const numParcelasInput = document.getElementById('numParcelas');
     const valorTotalInput = document.getElementById('valorTotal');
     const dataInicioInput = document.getElementById('dataInicio');
@@ -1064,7 +1066,7 @@ async function salvarContaOtimista() {
     updateAllFilters();
     updateDashboard();
     filterContas();
-    closeFormModal();
+    window.closeFormModal();
     
     showMessage('Nova conta registrada', 'success');
     
@@ -1147,7 +1149,7 @@ async function salvarContaParcelada() {
     updateAllFilters();
     updateDashboard();
     filterContas();
-    closeFormModal();
+    window.closeFormModal();
 
     showMessage('Nova conta registrada', 'success');
 
@@ -1211,7 +1213,7 @@ async function editarContaOtimista(editId) {
 
     if (!isOnline) {
         showMessage('Sistema offline. Dados não foram salvos.', 'error');
-        closeFormModal();
+        window.closeFormModal();
         return;
     }
 
@@ -1228,7 +1230,7 @@ async function editarContaOtimista(editId) {
     updateAllFilters();
     updateDashboard();
     filterContas();
-    closeFormModal();
+    window.closeFormModal();
     
     showMessage('Registro atualizado', 'success');
     
@@ -1292,7 +1294,7 @@ async function handleEditSubmitParcelas() {
     
     if (!isOnline) {
         showMessage('Sistema offline. Dados não foram salvos.', 'error');
-        closeFormModal();
+        window.closeFormModal();
         return;
     }
     
@@ -1349,7 +1351,7 @@ async function handleEditSubmitParcelas() {
     updateAllFilters();
     updateDashboard();
     filterContas();
-    closeFormModal();
+    window.closeFormModal();
     
     showMessage('Registro atualizado', 'success');
     
@@ -1415,6 +1417,7 @@ async function processEditQueue(atualizacoes, backupOriginal, totalParcelas) {
 }
 
 window.closeFormModal = function() {
+    console.log('❌ closeFormModal chamado');
     const modal = document.getElementById('formModal');
     if (modal) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -1443,6 +1446,7 @@ function applyUppercaseFields() {
 // TOGGLE PAGO
 // ============================================
 window.togglePago = async function(id) {
+    console.log('✓ togglePago chamado com id:', id);
     const idStr = String(id);
     const conta = contas.find(c => String(c.id || c.tempId) === idStr);
     if (!conta) return;
@@ -1496,6 +1500,7 @@ window.editConta = function(id) {
 };
 
 window.deleteConta = async function(id) {
+    console.log('🗑️ deleteConta chamado com id:', id);
     if (!confirm('Tem certeza que deseja excluir esta conta?')) return;
 
     const idStr = String(id);
@@ -1575,7 +1580,7 @@ window.viewConta = function(id) {
     const modal = `
         <div class="modal-overlay" id="viewModal">
             <div class="modal-content modal-view">
-                <button class="modal-close-x" onclick="closeViewModal()" title="Fechar">✕</button>
+                <button class="modal-close-x" onclick="window.closeViewModal()" title="Fechar">✕</button>
                 <div class="modal-header">
                     <h3 class="modal-title">Detalhes da Conta</h3>
                 </div>
@@ -1609,7 +1614,7 @@ window.viewConta = function(id) {
                     ${observacoesInfo}
                 </div>
                 <div class="modal-actions">
-                    <button class="secondary" onclick="closeViewModal()">Fechar</button>
+                    <button class="secondary" onclick="window.closeViewModal()">Fechar</button>
                 </div>
             </div>
         </div>
@@ -1618,6 +1623,7 @@ window.viewConta = function(id) {
 };
 
 window.closeViewModal = function() {
+    console.log('❌ closeViewModal chamado');
     const modal = document.getElementById('viewModal');
     if (modal) {
         modal.style.animation = 'fadeOut 0.2s ease forwards';
@@ -1809,7 +1815,7 @@ function renderContas(lista) {
                     <tr class="${isPago ? 'row-pago' : ''}">
                         <td style="text-align: center; padding: 8px;">
                            <button class="check-btn ${isPago ? 'checked' : ''}" 
-                                   onclick="togglePago('${contaId}')" 
+                                   onclick="window.togglePago('${contaId}')" 
                                    title="${isPago ? 'Marcar como pendente' : 'Marcar como pago'}">
                            </button>
                         </td>
@@ -1821,9 +1827,9 @@ function renderContas(lista) {
                         <td style="white-space: nowrap;">${c.data_pagamento ? formatDate(c.data_pagamento) : '-'}</td>
                         <td>${getStatusBadge(getStatusDinamico(c))}</td>
                         <td class="actions-cell" style="text-align: center;">
-                            <button onclick="viewConta('${contaId}')" class="action-btn view">Ver</button>
-                            <button onclick="editConta('${contaId}')" class="action-btn edit">Editar</button>
-                            <button onclick="deleteConta('${contaId}')" class="action-btn delete">Excluir</button>
+                            <button onclick="window.viewConta('${contaId}')" class="action-btn view">Ver</button>
+                            <button onclick="window.editConta('${contaId}')" class="action-btn edit">Editar</button>
+                            <button onclick="window.deleteConta('${contaId}')" class="action-btn delete">Excluir</button>
                         </td>
                     </tr>
                 `}).join('')}
