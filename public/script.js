@@ -631,15 +631,18 @@ window.showFormModal = async function(editingId = null) {
         </div>
     `;
 
-    const existingModal = document.getElementById('formModal');
-    if (existingModal) existingModal.remove();
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    setTimeout(() => {
-        applyUppercaseFields();
-    }, 100);
-}
+document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+const modal = document.getElementById('formModal');
+
+// FORÇA O CSS CORRETO
+requestAnimationFrame(() => {
+    modal.classList.add('show');
+});
+
+setTimeout(() => {
+    applyUppercaseFields();
+}, 100);
 
 function renderEditFormSimples(conta, isEditing) {
     const observacoesHTML = observacoesArray.length > 0 
